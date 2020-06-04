@@ -1,9 +1,7 @@
 import torch
 import torch.optim as optim
 import time
-import cost
-import kernel
-import sampler
+from torch_itl import cost, kernel, sampler
 
 dtype = torch.float
 
