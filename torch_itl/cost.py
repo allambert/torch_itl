@@ -53,8 +53,8 @@ class Cost(object):
         self.signature_dual = signature_dual
         self.Theta = Theta
 
-class PinballIntegral(Cost):
-
-    def __init__(self, lbda_nc):
-        super(PinballIntegral, self).init(signature_primal=ploss_with_crossing(lbda_nc),
-                                          signature_dual=)
+# class PinballIntegral(Cost):
+#
+#     def __init__(self, lbda_nc):
+#         super(PinballIntegral, self).init(signature_primal=ploss_with_crossing(lbda_nc),
+#                                           signature_dual=)
