@@ -47,7 +47,7 @@ class Gaussian(Kernel):
     def compute_gram(self,X,Y=None):
         return rbf_kernel(X,Y,self.gamma)
 
-class Learnable_gaussian(Kernel):
+class LearnableGaussian(Kernel):
 
     def __init__(self, gamma, model, optim_params):
         self.gamma= gamma

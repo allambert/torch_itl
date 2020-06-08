@@ -82,7 +82,7 @@ gamma = 3
 optim_params = dict(lr=0.1, momentum=0, dampening=0,
                     weight_decay=0, nesterov=False)
 
-kernel_input = kernel.Learnable_gaussian(gamma, model_kernel_input, optim_params)
+kernel_input = kernel.LearnableGaussian(gamma, model_kernel_input, optim_params)
 itl_model.kernel_input = kernel_input
 
 # %%
