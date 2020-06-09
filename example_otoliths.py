@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from torch_itl import model, sampler, cost, kernel
+from torch_itl import model, sampler, cost, kernel, estimator
 
 # %%
 # Data import
@@ -36,20 +36,36 @@ Y_test = torch.from_numpy(Y_test).float()
 dtype = torch.float
 device = torch.device("cpu")
 
-kernel_input = kernel.Gaussian(0.3)
-kernel_output = kernel.Gaussian(9)
-itl_model = model.KernelModel(kernel_input, kernel_output)
-cost_function = cost.ploss
+X_train.shape
+n_h = 80
+d_out = 50
+model_kernel_input = torch.nn.Sequential(
+    torch.nn.Linear(X_train.shape[1], n_h),
+    torch.nn.ReLU(),
+    torch.nn.Linear(n_h, n_h),
+    torch.nn.Linear(n_h, d_out),
+)
+optim_params = dict(lr=0.001, momentum=0, dampening=0,
+                    weight_decay=0, nesterov=False)
+
+kernel_input = kernel.GaussianRFF(X_train.shape[1],50,3)
+kernel_output = kernel.GaussianRFF(1,30,4)
+itl_model = model.RFFModel(kernel_input, kernel_output)
+cost_function = cost.ploss_with_crossing(0.01)
 lbda = 0.001
-sampler_ = sampler.LinearSampler(0.1, 0.9, 10, 0)
-sampler_.m = 10
+sampler_ = sampler.LinearSampler(0.05, 0.95, epsilon=0)
+sampler_.m = 25
 
 itl_estimator = estimator.ITLEstimator(itl_model,
                                        cost_function, lbda, sampler_)
 
-itl_estimator.fit_alpha(X_train, Y_train, n_epochs=60,
+itl_estimator.fit_alpha(X_train, Y_train, n_epochs=20,
                         lr=0.001, line_search_fn='strong_wolfe')
+
+# %%
 
 plt.figure()
 plt.plot(itl_estimator.losses)
 plt.show()
+
+# %%
