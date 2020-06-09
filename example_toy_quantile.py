@@ -1,9 +1,8 @@
 import torch
-#from operalib.datasets.quantile import toy_data_quantile
+from operalib.datasets.quantile import toy_data_quantile
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from torch_itl import model, sampler, cost, kernel, estimator
-from datasets import toy_data_quantile
 
 # %%
 
