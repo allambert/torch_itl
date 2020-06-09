@@ -33,10 +33,16 @@ def rbf_kernel(X, Y=None, gamma=None):
 
     return K
 
+def get_anchors_gaussian_rff(dim_input, dim_rff, gamma):
+    return gamma*torch.randn(dim_input, dim_rff)
+
+
+
 class Kernel(object):
 
     def __init__(self):
         pass
+
 
 class Gaussian(Kernel):
 
@@ -44,22 +50,58 @@ class Gaussian(Kernel):
         self.gamma = gamma
         self.is_learnable = False
 
-    def compute_gram(self,X,Y=None):
-        return rbf_kernel(X,Y,self.gamma)
+    def compute_gram(self, X, Y=None):
+        return rbf_kernel(X, Y, self.gamma)
 
-class Learnable_gaussian(Kernel):
+
+class LearnableGaussian(Kernel):
 
     def __init__(self, gamma, model, optim_params):
-        self.gamma= gamma
+        self.gamma = gamma
         self.is_learnable = True
         self.model = model
         self.optim_params = optim_params
 
-    def compute_gram(self,X,Y=None):
+    def compute_gram(self, X, Y=None):
         if Y is None:
             return rbf_kernel(self.model.forward(X))
         else:
-            return rbf_kernel(self.model.forward(X),self.model.forward(Y))
+            return rbf_kernel(self.model.forward(X), self.model.forward(Y))
+
+    def regularization(self):
+        return 0
+
+    def clear_memory(self):
+        self.losses, self.times = [], [0]
+
+
+class GaussianRFF(Kernel):
+
+    def __init__(self, dim_input, dim_rff, gamma):
+        self.dim_rff = dim_rff
+        self.is_learnable = False
+        self.anchors = get_anchors_gaussian_rff(
+            dim_input, dim_rff, gamma)
+
+    def feature_map(self, X):
+        a = torch.cos(X @ self.anchors)
+        b = torch.sin(X @ self.anchors)
+        return 1/torch.sqrt(torch.Tensor([self.dim_rff]))*torch.cat((a,b),1)
+
+class LearnableGaussianRFF(Kernel):
+
+    def __init__(self, gamma, model, dim_model_output, dim_rff, optim_params):
+        self.dim_rff = dim_rff
+        self.model = model
+        self.is_learnable = True
+        self.anchors = get_anchors_gaussian_rff(
+            dim_model_output, dim_rff, gamma)
+        self.optim_params = optim_params
+
+    def feature_map(self, X):
+        a = torch.cos(self.model.forward(X) @ self.anchors)
+        b = torch.sin(self.model.forward(X) @ self.anchors)
+        return 1/torch.sqrt(torch.Tensor([self.dim_rff]))*torch.cat((a,b),1)
 
     def regularization(self):
         return 0

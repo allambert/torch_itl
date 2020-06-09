@@ -19,6 +19,9 @@ def ploss(y_true, y_pred, probs):
                      (probs - 1).view(-1) * residual).sum() / n / m
     return(loss)
 
+def ploss_dual(res,thetas):
+    condition = (res < thetas) & (res >  thetas - 1)
+    return torch.where(condition, 0, sys.float_info.max)
 
 def closs(y_pred):
     """Compute the crossing loss.
@@ -42,3 +45,16 @@ def ploss_with_crossing(lbda_nc):
     def ploss_with_crossing_lbda(y_true, y_pred, probs):
         return(ploss(y_true, y_pred, probs) + lbda_nc * closs(y_pred))
     return ploss_with_crossing_lbda
+
+class Cost(object):
+
+    def __init__(self,signature_primal, signature_dual, Theta):
+        self.signature_primal = signature_primal
+        self.signature_dual = signature_dual
+        self.Theta = Theta
+
+# class PinballIntegral(Cost):
+#
+#     def __init__(self, lbda_nc):
+#         super(PinballIntegral, self).init(signature_primal=ploss_with_crossing(lbda_nc),
+#                                           signature_dual=)
