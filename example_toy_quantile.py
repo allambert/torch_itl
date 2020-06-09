@@ -38,13 +38,13 @@ sampler_ = sampler.LinearSampler(0.1, 0.9, 10, 0)
 sampler_.m = 10
 
 itl_estimator = estimator.ITLEstimator(itl_model,
-                      cost_function, lbda, sampler_)
+                                       cost_function, lbda, sampler_)
 
 # Learning the coefficients of the model
 print("Fitting the coefficients of the model")
 
 itl_estimator.fit_alpha(x_train, y_train, n_epochs=40,
-                    lr=0.001, line_search_fn='strong_wolfe')
+                        lr=0.001, line_search_fn='strong_wolfe')
 
 # Plotting the loss along learning
 
@@ -62,7 +62,7 @@ y_pred = itl_estimator.model.forward(x_test, probs).detach().numpy()
 colors = [cm.viridis(x.item()) for x in torch.linspace(0, 1, 30)]
 plt.figure()
 plt.title("Conditional Quantiles output by our model")
-plt.scatter(x_train,y_train,marker='.')
+plt.scatter(x_train, y_train, marker='.')
 for i in range(30):
     plt.plot(x_test, y_pred[:, i], c=colors[i])
 plt.show()
@@ -83,12 +83,13 @@ gamma = 3
 optim_params = dict(lr=0.1, momentum=0, dampening=0,
                     weight_decay=0, nesterov=False)
 
-kernel_input = kernel.LearnableGaussian(gamma, model_kernel_input, optim_params)
+kernel_input = kernel.LearnableGaussian(
+    gamma, model_kernel_input, optim_params)
 itl_estimator.model.kernel_input = kernel_input
 
 # %%
 
-itl_estimator.fit_kernel_input(x_train,y_train)
+itl_estimator.fit_kernel_input(x_train, y_train)
 
 # plot the loss along learning the kernel
 
@@ -101,7 +102,8 @@ plt.show()
 # Now retrain the parameters alpha of the model
 
 itl_estimator.clear_memory()
-itl_estimator.fit_alpha(x_train,y_train,n_epochs=40,lr=0.01,line_search_fn='strong_wolfe')
+itl_estimator.fit_alpha(x_train, y_train, n_epochs=40,
+                        lr=0.01, line_search_fn='strong_wolfe')
 
 # plot the loss
 
@@ -110,13 +112,14 @@ plt.title("Loss evolution when learning model coefficients again")
 plt.plot(itl_estimator.losses)
 plt.show()
 
-y_pred = itl_estimator.model.forward(x_test,probs).detach().numpy()
+y_pred = itl_estimator.model.forward(x_test, probs).detach().numpy()
 colors = [cm.viridis(x.item()) for x in torch.linspace(0, 1, 30)]
 plt.figure()
 plt.title('Conditional Quantiles with learned kernel')
-plt.scatter(x_train,y_train,marker='.')
+plt.scatter(x_train, y_train, marker='.')
 for i in range(30):
-    plt.plot(x_test,y_pred[:,i],c=colors[i])
+    plt.plot(x_test, y_pred[:, i], c=colors[i])
 plt.show()
 
-print('Loss gain from learning the kernel: ',best_loss - itl_estimator.losses[-1])
+print('Loss gain from learning the kernel: ',
+      best_loss - itl_estimator.losses[-1])

@@ -45,6 +45,7 @@ class KernelModel(Model):
             self.model.alpha = torch.randn(
                 (self.model.n, self.model.m), requires_grad=True)
 
+
 class RFFModel(Model):
 
     def __init__(self, kernel_input, kernel_output):
@@ -63,4 +64,4 @@ class RFFModel(Model):
     def initialise(self, x_train, warm_start):
         if not hasattr(self, 'alpha') or not warm_start:
             self.alpha = torch.randn(
-                (2*self.kernel_input.dim_rff, 2*self.kernel_output.dim_rff), requires_grad=True)
+                (2 * self.kernel_input.dim_rff, 2 * self.kernel_output.dim_rff), requires_grad=True)

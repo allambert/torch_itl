@@ -1,5 +1,6 @@
 import torch
 
+
 class LinearSampler(object):
     'Linear sampling class'
 

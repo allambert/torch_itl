@@ -33,9 +33,9 @@ def rbf_kernel(X, Y=None, gamma=None):
 
     return K
 
-def get_anchors_gaussian_rff(dim_input, dim_rff, gamma):
-    return gamma*torch.randn(dim_input, dim_rff)
 
+def get_anchors_gaussian_rff(dim_input, dim_rff, gamma):
+    return gamma * torch.randn(dim_input, dim_rff)
 
 
 class Kernel(object):
@@ -86,7 +86,8 @@ class GaussianRFF(Kernel):
     def feature_map(self, X):
         a = torch.cos(X @ self.anchors)
         b = torch.sin(X @ self.anchors)
-        return 1/torch.sqrt(torch.Tensor([self.dim_rff]))*torch.cat((a,b),1)
+        return 1 / torch.sqrt(torch.Tensor([self.dim_rff])) * torch.cat((a, b), 1)
+
 
 class LearnableGaussianRFF(Kernel):
 
@@ -101,7 +102,7 @@ class LearnableGaussianRFF(Kernel):
     def feature_map(self, X):
         a = torch.cos(self.model.forward(X) @ self.anchors)
         b = torch.sin(self.model.forward(X) @ self.anchors)
-        return 1/torch.sqrt(torch.Tensor([self.dim_rff]))*torch.cat((a,b),1)
+        return 1 / torch.sqrt(torch.Tensor([self.dim_rff])) * torch.cat((a, b), 1)
 
     def regularization(self):
         return 0

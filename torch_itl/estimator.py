@@ -29,7 +29,7 @@ class ITLEstimator(object):
             obj += self.model.kernel_output.regularization()
         return(obj)
 
-    def fit_alpha(self, x_train, y_train, n_epochs=500, solver='lbfgs', minibatch=False, warm_start=True,**kwargs):
+    def fit_alpha(self, x_train, y_train, n_epochs=500, solver='lbfgs', minibatch=False, warm_start=True, **kwargs):
         """Fits the parameters alpha of the model. The matrix of coefficients alpha is obtained using
         LBFGS. If kernel_input or kernel_output are learnable, an optimization pass
         is made on the coefficients of their feature maps, with parameters defined as
