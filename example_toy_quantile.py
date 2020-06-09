@@ -1,5 +1,5 @@
 import torch
-from datasets.datasets import toy_data_quantile
+from datasets.datasets import import_data_toy_quantile
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from torch_itl import model, sampler, cost, kernel, estimator
@@ -14,9 +14,7 @@ device = torch.device("cpu")
 
 print("Creating the dataset")
 
-x_train, y_train, _ = toy_data_quantile(150)
-x_train = torch.from_numpy(x_train).float()
-y_train = torch.from_numpy(y_train).float()
+x_train, y_train, _ = import_data_toy_quantile(150)
 n = x_train.shape[0]
 m = 10
 
@@ -80,7 +78,7 @@ model_kernel_input = torch.nn.Sequential(
     torch.nn.Linear(n_h, d_out),
 )
 gamma = 3
-optim_params = dict(lr=0.1, momentum=0, dampening=0,
+optim_params = dict(lr=0.01, momentum=0, dampening=0,
                     weight_decay=0, nesterov=False)
 
 kernel_input = kernel.LearnableGaussian(

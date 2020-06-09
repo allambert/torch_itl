@@ -64,9 +64,9 @@ class LearnableGaussian(Kernel):
 
     def compute_gram(self, X, Y=None):
         if Y is None:
-            return rbf_kernel(self.model.forward(X))
+            return rbf_kernel(self.model.forward(X),Y=None,gamma=self.gamma)
         else:
-            return rbf_kernel(self.model.forward(X), self.model.forward(Y))
+            return rbf_kernel(self.model.forward(X), self.model.forward(Y),self.gamma)
 
     def regularization(self):
         return 0
