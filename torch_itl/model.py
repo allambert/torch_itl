@@ -39,11 +39,11 @@ class KernelModel(Model):
         self.thetas = thetas
         self.alpha = torch.randn((self.n, self.m), requires_grad=True)
 
-    def initialise(self, x_train):
-        self.model.x_train = x_train
-        if not hasattr(self.model, 'alpha') or not warm_start:
-            self.model.alpha = torch.randn(
-                (self.model.n, self.model.m), requires_grad=True)
+    def initialise(self, x_train, warm_start):
+        self.x_train = x_train
+        if not hasattr(self, 'alpha') or not warm_start:
+            self.alpha = torch.randn(
+                (self.n, self.m), requires_grad=True)
 
 
 class RFFModel(Model):
