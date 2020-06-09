@@ -92,7 +92,7 @@ itl_estimator.model.kernel_input = kernel_input
 
 # %%
 
-itl_estimator.fit_kernel_input(x_train, y_train)
+itl_estimator.fit_kernel_input(x_train, y_train, n_epochs=300)
 
 # plot the loss along learning the kernel
 
