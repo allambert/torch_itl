@@ -1,5 +1,8 @@
 import torch
 
+def get_anchors_gaussian_rff(dim_input, dim_rff, gamma):
+    pass
+
 
 class LinearSampler(object):
     'Linear sampling class'

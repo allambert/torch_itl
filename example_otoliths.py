@@ -38,17 +38,18 @@ device = torch.device("cpu")
 
 kernel_input = kernel.Gaussian(0.3)
 kernel_output = kernel.Gaussian(9)
+itl_model = model.KernelModel(kernel_input, kernel_output)
 cost_function = cost.ploss
 lbda = 0.001
 sampler_ = sampler.LinearSampler(0.1, 0.9, 10, 0)
 sampler_.m = 10
 
-itl_model = model.ITL(kernel_input, kernel_output,
-                      cost_function, lbda, sampler_)
+itl_estimator = estimator.ITLEstimator(itl_model,
+                                       cost_function, lbda, sampler_)
 
-itl_model.fit(X_train, Y_train, n_epochs=60,
-              lr=0.001, line_search_fn='strong_wolfe')
+itl_estimator.fit_alpha(X_train, Y_train, n_epochs=60,
+                        lr=0.001, line_search_fn='strong_wolfe')
 
 plt.figure()
-plt.plot(itl_model.losses)
+plt.plot(itl_estimator.losses)
 plt.show()

@@ -2,7 +2,7 @@ import torch
 from operalib.datasets.quantile import toy_data_quantile
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
-from torch_itl import model, sampler, cost, kernel
+from torch_itl import model, sampler, cost, kernel, estimator
 
 # %%
 
@@ -31,33 +31,34 @@ print("Defining the model")
 
 kernel_input = kernel.Gaussian(3.5)
 kernel_output = kernel.Gaussian(9)
+itl_model = model.KernelModel(kernel_input, kernel_output)
 cost_function = cost.ploss_with_crossing(0.01)
 lbda = 0.001
 sampler_ = sampler.LinearSampler(0.1, 0.9, 10, 0)
 sampler_.m = 10
 
-itl_model = model.ITL(kernel_input, kernel_output,
+itl_estimator = estimator.ITLEstimator(itl_model,
                       cost_function, lbda, sampler_)
 
 # Learning the coefficients of the model
 print("Fitting the coefficients of the model")
 
-itl_model.fit_alpha(x_train, y_train, n_epochs=40,
+itl_estimator.fit_alpha(x_train, y_train, n_epochs=40,
                     lr=0.001, line_search_fn='strong_wolfe')
 
 # Plotting the loss along learning
 
 plt.figure()
 plt.title("Loss evolution with time")
-plt.plot(itl_model.losses)
+plt.plot(itl_estimator.losses)
 plt.show()
-best_loss = itl_model.losses[-1]
+best_loss = itl_estimator.losses[-1]
 
 # Plotting the model on test points
 
-probs = itl_model.sampler.sample(30)
+probs = itl_estimator.sampler.sample(30)
 x_test = torch.linspace(0, 1.4, 100).view(-1, 1)
-y_pred = itl_model.forward(x_test, probs).detach().numpy()
+y_pred = itl_estimator.model.forward(x_test, probs).detach().numpy()
 colors = [cm.viridis(x.item()) for x in torch.linspace(0, 1, 30)]
 plt.figure()
 plt.title("Conditional Quantiles output by our model")
@@ -83,33 +84,33 @@ optim_params = dict(lr=0.1, momentum=0, dampening=0,
                     weight_decay=0, nesterov=False)
 
 kernel_input = kernel.LearnableGaussian(gamma, model_kernel_input, optim_params)
-itl_model.kernel_input = kernel_input
+itl_estimator.model.kernel_input = kernel_input
 
 # %%
 
-itl_model.fit_kernel_input(x_train,y_train)
+itl_estimator.fit_kernel_input(x_train,y_train)
 
 # plot the loss along learning the kernel
 
 plt.figure()
 plt.title("Loss evolution when learning the kernel")
-plt.plot(itl_model.kernel_input.losses)
+plt.plot(itl_estimator.model.kernel_input.losses)
 plt.show()
 
 # %%
 # Now retrain the parameters alpha of the model
 
-itl_model.clear_memory()
-itl_model.fit_alpha(x_train,y_train,n_epochs=40,lr=0.01,line_search_fn='strong_wolfe')
+itl_estimator.clear_memory()
+itl_estimator.fit_alpha(x_train,y_train,n_epochs=40,lr=0.01,line_search_fn='strong_wolfe')
 
 # plot the loss
 
 plt.figure()
 plt.title("Loss evolution when learning model coefficients again")
-plt.plot(itl_model.losses)
+plt.plot(itl_estimator.losses)
 plt.show()
 
-y_pred = itl_model.forward(x_test,probs).detach().numpy()
+y_pred = itl_estimator.model.forward(x_test,probs).detach().numpy()
 colors = [cm.viridis(x.item()) for x in torch.linspace(0, 1, 30)]
 plt.figure()
 plt.title('Conditional Quantiles with learned kernel')
@@ -118,4 +119,4 @@ for i in range(30):
     plt.plot(x_test,y_pred[:,i],c=colors[i])
 plt.show()
 
-print('Loss gain from learning the kernel: ',best_loss - itl_model.losses[-1])
+print('Loss gain from learning the kernel: ',best_loss - itl_estimator.losses[-1])

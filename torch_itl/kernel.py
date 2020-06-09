@@ -1,4 +1,5 @@
 import torch
+import sampler
 
 dtype = torch.float
 device = torch.device("cpu")
@@ -33,10 +34,12 @@ def rbf_kernel(X, Y=None, gamma=None):
 
     return K
 
+
 class Kernel(object):
 
     def __init__(self):
         pass
+
 
 class Gaussian(Kernel):
 
@@ -44,25 +47,37 @@ class Gaussian(Kernel):
         self.gamma = gamma
         self.is_learnable = False
 
-    def compute_gram(self,X,Y=None):
-        return rbf_kernel(X,Y,self.gamma)
+    def compute_gram(self, X, Y=None):
+        return rbf_kernel(X, Y, self.gamma)
+
 
 class LearnableGaussian(Kernel):
 
     def __init__(self, gamma, model, optim_params):
-        self.gamma= gamma
+        self.gamma = gamma
         self.is_learnable = True
         self.model = model
         self.optim_params = optim_params
 
-    def compute_gram(self,X,Y=None):
+    def compute_gram(self, X, Y=None):
         if Y is None:
             return rbf_kernel(self.model.forward(X))
         else:
-            return rbf_kernel(self.model.forward(X),self.model.forward(Y))
+            return rbf_kernel(self.model.forward(X), self.model.forward(Y))
 
     def regularization(self):
         return 0
 
     def clear_memory(self):
         self.losses, self.times = [], [0]
+
+
+class GaussianRFF(Kernel):
+
+    def __init__(self, dim_input, dim_rff, gamma):
+        self.dim_rff = dim_rff
+        self.is_learnable = false
+        self.anchors = sampler.get_anchors_gaussian_rff(
+            dim_input, dim_rff, gamma)
+
+    def feature_map(self, X):
