@@ -1,9 +1,5 @@
 import torch
-import torch.optim as optim
-import time
-from .cost import *
-from .kernel import *
-from .sampler import *
+# from .kernel import *
 
 dtype = torch.float
 
@@ -43,6 +39,12 @@ class KernelModel(Model):
         self.thetas = thetas
         self.alpha = torch.randn((self.n, self.m), requires_grad=True)
 
+    def initialise(self, x_train):
+        self.model.x_train = x_train
+        if not hasattr(self.model, 'alpha') or not warm_start:
+            self.model.alpha = torch.randn(
+                (self.model.n, self.model.m), requires_grad=True)
+
 class RFFModel(Model):
 
     def __init__(self, kernel_input, kernel_output):
@@ -51,5 +53,14 @@ class RFFModel(Model):
 
     def forward(self, x, thetas):
         "Computes the output of the model at point (x,thetas)"
-        if not hasattr(self, 'alpha'):
-            self.alpha = torch.randn((self.kernel_input.dim_rff, self.kernel_output.dim_rff), requires_grad=True)
+        feature_map_input = self.kernel_input.feature_map(x)
+        feature_map_output = self.kernel_output.feature_map(thetas)
+        return feature_map_input @ self.alpha @ feature_map_output.T
+
+    def vv_norm(self):
+        return torch.trace(self.alpha @ self.alpha.T)
+
+    def initialise(self, x_train, warm_start):
+        if not hasattr(self, 'alpha') or not warm_start:
+            self.alpha = torch.randn(
+                (2*self.kernel_input.dim_rff, 2*self.kernel_output.dim_rff), requires_grad=True)

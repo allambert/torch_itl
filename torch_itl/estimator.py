@@ -8,6 +8,7 @@ from .model import *
 
 dtype = torch.float
 
+
 class ITLEstimator(object):
     "ITL Class with fitting procedure using pytorch"
 
@@ -28,22 +29,23 @@ class ITLEstimator(object):
             obj += self.model.kernel_output.regularization()
         return(obj)
 
-    def fit_alpha(self, x_train, y_train, n_epochs=500, solver='lbfgs', minibatch=False,**kwargs):
+    def fit_alpha(self, x_train, y_train, n_epochs=500, solver='lbfgs', minibatch=False, warm_start=True,**kwargs):
         """Fits the parameters alpha of the model. The matrix of coefficients alpha is obtained using
         LBFGS. If kernel_input or kernel_output are learnable, an optimization pass
         is made on the coefficients of their feature maps, with parameters defined as
         attributes in the kernels
         """
+        n = x_train.shape[0]
         if not hasattr(self.sampler, 'm'):
-            self.model.m = int(torch.floor(torch.sqrt(torch.Tensor(n))).item())
+            self.model.m = int(torch.floor(
+                torch.sqrt(torch.Tensor([n]))).item())
             self.sampler.m = self.model.m
         else:
             self.model.m = self.sampler.m
         self.model.thetas = self.sampler.sample(self.model.m)
-        self.model.n = x_train.shape[0]
-        self.model.x_train = x_train
-        if not hasattr(self.model,'alpha'):
-            self.model.alpha = torch.randn((self.model.n, self.model.m), requires_grad=True)
+        self.model.n = n
+
+        self.model.initialise(x_train, warm_start)
 
         if not hasattr(self, 'losses'):
             self.losses = []
@@ -65,15 +67,15 @@ class ITLEstimator(object):
             self.times.append(time.time() - t0)
             optimizer_alpha.step(closure_alpha)
 
-    def fit_kernel_input(self,x_train, y_train,n_epochs=150, solver='sgd', minibatch=False):
+    def fit_kernel_input(self, x_train, y_train, n_epochs=150, solver='sgd', minibatch=False):
 
         optimizer_kernel = optim.SGD(
             self.model.kernel_input.model.parameters(),
-            lr = self.model.kernel_input.optim_params['lr'],
-            momentum = self.model.kernel_input.optim_params['momentum'],
-            dampening = self.model.kernel_input.optim_params['dampening'],
-            weight_decay = self.model.kernel_input.optim_params['weight_decay'],
-            nesterov = self.model.kernel_input.optim_params['nesterov'])
+            lr=self.model.kernel_input.optim_params['lr'],
+            momentum=self.model.kernel_input.optim_params['momentum'],
+            dampening=self.model.kernel_input.optim_params['dampening'],
+            weight_decay=self.model.kernel_input.optim_params['weight_decay'],
+            nesterov=self.model.kernel_input.optim_params['nesterov'])
 
         def closure_kernel():
             loss = self.objective(x_train, y_train, self.model.thetas)
@@ -90,18 +92,18 @@ class ITLEstimator(object):
         for k in range(n_epochs):
             loss = closure_kernel()
             self.model.kernel_input.losses.append(loss.item())
-            self.model.kernel_input.times.append(time.time()-t0)
+            self.model.kernel_input.times.append(time.time() - t0)
             optimizer_kernel.step(closure_kernel)
 
-    def fit_kernel_output(self,x_train, y_train,n_epochs=150, solver='sgd', minibatch=False):
+    def fit_kernel_output(self, x_train, y_train, n_epochs=150, solver='sgd', minibatch=False):
 
         optimizer_kernel = optim.SGD(
             self.model.kernel_output.model.parameters,
-            lr = self.model.kernel_output.optim_params['lr'],
-            momentum = self.model.kernel_output.optim_params['momentum'],
-            dampening = self.model.kernel_output.optim_params['dampening'],
-            weight_decay = self.model.kernel_output.optim_params['weight_decay'],
-            nesterov = self.model.kernel_output.optim_params['nesterov'])
+            lr=self.model.kernel_output.optim_params['lr'],
+            momentum=self.model.kernel_output.optim_params['momentum'],
+            dampening=self.model.kernel_output.optim_params['dampening'],
+            weight_decay=self.model.kernel_output.optim_params['weight_decay'],
+            nesterov=self.model.kernel_output.optim_params['nesterov'])
 
         def closure_kernel():
             loss = self.objective(x_train, y_train, self.model.thetas)
@@ -118,7 +120,7 @@ class ITLEstimator(object):
         for k in range(n_epochs):
             loss = closure_kernel()
             self.model.kernel_output.losses.append(loss.item())
-            self.model.kernel_output.times.append(time.time()-t0)
+            self.model.kernel_output.times.append(time.time() - t0)
             optimizer_kernel.step(closure_kernel)
 
     def clear_memory(self):

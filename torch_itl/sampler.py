@@ -1,7 +1,7 @@
 import torch
 
 def get_anchors_gaussian_rff(dim_input, dim_rff, gamma):
-    pass
+    return gamma*torch.randn(dim_input, dim_rff)
 
 
 class LinearSampler(object):

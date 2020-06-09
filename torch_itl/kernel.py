@@ -1,5 +1,4 @@
 import torch
-import sampler
 
 dtype = torch.float
 device = torch.device("cpu")
@@ -33,6 +32,10 @@ def rbf_kernel(X, Y=None, gamma=None):
     K = torch.exp(K_tmp)
 
     return K
+
+def get_anchors_gaussian_rff(dim_input, dim_rff, gamma):
+    return gamma*torch.randn(dim_input, dim_rff)
+
 
 
 class Kernel(object):
@@ -76,8 +79,32 @@ class GaussianRFF(Kernel):
 
     def __init__(self, dim_input, dim_rff, gamma):
         self.dim_rff = dim_rff
-        self.is_learnable = false
-        self.anchors = sampler.get_anchors_gaussian_rff(
+        self.is_learnable = False
+        self.anchors = get_anchors_gaussian_rff(
             dim_input, dim_rff, gamma)
 
     def feature_map(self, X):
+        a = torch.cos(X @ self.anchors)
+        b = torch.sin(X @ self.anchors)
+        return 1/torch.sqrt(torch.Tensor([self.dim_rff]))*torch.cat((a,b),1)
+
+class LearnableGaussianRFF(Kernel):
+
+    def __init__(self, gamma, model, dim_model_output, dim_rff, optim_params):
+        self.dim_rff = dim_rff
+        self.model = model
+        self.is_learnable = True
+        self.anchors = get_anchors_gaussian_rff(
+            dim_model_output, dim_rff, gamma)
+        self.optim_params = optim_params
+
+    def feature_map(self, X):
+        a = torch.cos(self.model.forward(X) @ self.anchors)
+        b = torch.sin(self.model.forward(X) @ self.anchors)
+        return 1/torch.sqrt(torch.Tensor([self.dim_rff]))*torch.cat((a,b),1)
+
+    def regularization(self):
+        return 0
+
+    def clear_memory(self):
+        self.losses, self.times = [], [0]
