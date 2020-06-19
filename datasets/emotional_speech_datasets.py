@@ -8,6 +8,11 @@ base_folder_path = '/mnt/telecom1/emotional_speech_datasets'
 
 
 class EmotionalSpeechDataset(ABC):
+    """
+    Base class for emotional speech datasets
+    Implements basic methods to interact/filter such data
+    based on emotions ans speakers. More to be added as and when required.
+    """
     def __init__(self, data_dir_name):
         self.data_path = os.path.join(base_folder_path, data_dir_name)
         self.metadata_csv_path = os.path.join(self.data_path,
@@ -26,6 +31,20 @@ class EmotionalSpeechDataset(ABC):
         return
 
     def get_speaker_emotion(self, speaker_list, emotion_list):
+        """
+        Filter pandas data-frame based on provided speaker and emotion
+        lists
+        Parameters
+        ----------
+        speaker_list: list
+            list of speakers to filter
+        emotion_list: list
+            list of emotions to filter
+
+        Returns
+        -------
+            pandas data frame (filtered)
+        """
         filtered_metadata = self.metadata[(self.metadata['speaker'].
                                            isin(speaker_list)) &
                                           (self.metadata['emotion'].
@@ -39,15 +58,21 @@ class EmovDB(EmotionalSpeechDataset):
         super().__init__(data_dir_name)
 
     def create_metadata_csv(self):
+        """
+        Writes a metadata csv
+        Code adapted from dataset github repo script align_db.py
 
-        # code adapted from dataset github repo script align_db.py
-
-        # get a list of speakers, in emovdb this can be obtained by checking
-        # subdirectory names
+        Returns
+        -------
+        An output metadata file stored at self.metadata_csv_path
+        """
 
         data = []
+        # get a list of speakers, in emovdb this can be obtained by checking
+        # subdirectory names
         self.speakers = next(os.walk(self.data_path))[1]
         # print(self.speakers)
+
         for spk in self.speakers:
             # maybe all emotions do not exist for all speaker
             emo_cat = next(os.walk(os.path.join(self.data_path, spk)))[1]
@@ -118,7 +143,24 @@ class Ravdess(EmotionalSpeechDataset):
 
 
 def compute_mel_spectrogram(wav_paths_list, n_fft=1024, hop_length=256, n_mels=80, **kwargs):
+    """
+    Computing mel spec for input wav files. Current params chosen as per
+    compatibility with Waveglow
 
+    Parameters
+    ----------
+    wav_paths_list: list
+        list of wav files to process
+    n_fft: int
+    hop_length: int
+    n_mels : int
+    kwargs: dict
+        other input arguments for mel spec computation function
+
+    Returns
+    -------
+
+    """
     n_features = []
     for wav_file in wav_paths_list:
         x, sr = librosa.load(wav_file)
