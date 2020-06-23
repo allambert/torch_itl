@@ -1,10 +1,6 @@
 import torch
 import torch.optim as optim
 import time
-from .cost import *
-from .kernel import *
-from .sampler import *
-from .model import *
 
 dtype = torch.float
 
