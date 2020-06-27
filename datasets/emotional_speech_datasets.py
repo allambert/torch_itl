@@ -2,7 +2,6 @@ import os
 from abc import ABC
 import numpy as np
 import pandas as pd
-import librosa
 
 base_folder_path = '/mnt/telecom1/emotional_speech_datasets'
 
@@ -28,6 +27,8 @@ class EmotionalSpeechDataset(ABC):
         if not os.path.exists(self.metadata_csv_path):
             self.create_metadata_csv()
         self.metadata = pd.read_csv(self.metadata_csv_path)
+        self.speakers = self.metadata['speaker'].unique().tolist()
+        self.emotions = self.metadata['emotion'].unique().tolist()
         return
 
     def get_speaker_emotion(self, speaker_list, emotion_list):
@@ -141,37 +142,3 @@ class Ravdess(EmotionalSpeechDataset):
         print('data written to csv file')
         return
 
-
-def compute_mel_spectrogram(wav_paths_list, n_fft=1024, hop_length=256, n_mels=80, **kwargs):
-    """
-    Computing mel spec for input wav files. Current params chosen as per
-    compatibility with Waveglow
-
-    Parameters
-    ----------
-    wav_paths_list: list
-        list of wav files to process
-    n_fft: int
-    hop_length: int
-    n_mels : int
-    kwargs: dict
-        other input arguments for mel spec computation function
-
-    Returns
-    -------
-
-    """
-    n_features = []
-    for wav_file in wav_paths_list:
-        x, sr = librosa.load(wav_file)
-        x_mel_spec = librosa.feature.melspectrogram(y=x, sr=sr, power=1.0,
-                                                    n_fft=n_fft, hop_length=hop_length,
-                                                    n_mels=n_mels, **kwargs)
-        assert x_mel_spec.shape[0] == n_mels
-        x_out = dynamic_range_compression(x_mel_spec)
-        n_features.append(x_out)
-    return n_features
-
-
-def dynamic_range_compression(x, clip_val=1e-5):
-    return np.log(np.clip(x, a_min=clip_val, a_max=None))
