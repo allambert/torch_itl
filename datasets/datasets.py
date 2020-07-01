@@ -3,6 +3,8 @@ import torch
 import pandas as pd
 
 from .synthetic_quantile import toy_data_quantile
+from .emotional_speech_datasets import Ravdess
+from .emotional_speech_dataloader import generate_training_samples
 
 def import_data_otoliths():
 
@@ -35,3 +37,31 @@ def import_data_toy_quantile(*args):
     y_train = torch.from_numpy(y_train).float()
     probs = torch.Tensor(probs)
     return x_train, y_train, probs
+
+
+def import_speech_synth_ravdess():
+    db_rds = Ravdess('RAVDESS')
+    db_rds.load_metadata_csv()
+    print(db_rds.speakers)
+    set_speakers = ['Actor_01']
+    set_emotions = ['neutral', 'sad', 'happy', 'calm']
+    set_sentence = db_rds.sentence_dict['01']
+    set_repetition = int(db_rds.repetition_dict['01'])
+    set_intensity = db_rds.intensity_dict['01']
+    db_rds_filtered = db_rds.get_speaker_emotion(set_speakers, set_emotions)
+    train_db_rds = db_rds_filtered[(db_rds_filtered['sentence'] == set_sentence) &
+                                   (db_rds_filtered['repetition'] == set_repetition) &
+                                   (db_rds_filtered['intensity'] == set_intensity)]
+    inp_list = [[train_db_rds[train_db_rds['emotion'] == 'neutral']['file_path'].tolist()[0],
+                 train_db_rds[train_db_rds['emotion'] != 'neutral']['file_path'].tolist()]]
+    """
+    inp_list = [['./RAVDESS/Actor_01/03-01-01-01-01-01-01.wav',
+                 ['./RAVDESS/Actor_01/03-01-02-01-01-01-01.wav',
+                  './RAVDESS/Actor_01/03-01-03-01-01-01-01.wav',
+                  './RAVDESS/Actor_01/03-01-04-01-01-01-01.wav']]]
+    """
+    training_samples = generate_training_samples(inp_list, context=0)
+    # x_train = torch.from_numpy(np.expand_dims(training_samples[0][0], axis=1)).float()
+    x_train = torch.from_numpy(np.squeeze(training_samples[0][0])).float()
+    y_train = torch.from_numpy(training_samples[0][1]).float()
+    return x_train, y_train
