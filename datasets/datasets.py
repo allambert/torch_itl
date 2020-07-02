@@ -4,7 +4,8 @@ import pandas as pd
 
 from .synthetic_quantile import toy_data_quantile
 from .emotional_speech_datasets import Ravdess
-from .emotional_speech_dataloader import generate_training_samples
+from .emotional_speech_features import generate_training_samples
+
 
 def import_data_otoliths():
 
@@ -52,8 +53,14 @@ def import_speech_synth_ravdess():
     train_db_rds = db_rds_filtered[(db_rds_filtered['sentence'] == set_sentence) &
                                    (db_rds_filtered['repetition'] == set_repetition) &
                                    (db_rds_filtered['intensity'] == set_intensity)]
-    inp_list = [[train_db_rds[train_db_rds['emotion'] == 'neutral']['file_path'].tolist()[0],
-                 train_db_rds[train_db_rds['emotion'] != 'neutral']['file_path'].tolist()]]
+    neu_list = train_db_rds[train_db_rds['emotion'] == 'neutral']['file_path'].tolist()[0]
+    emo_list = train_db_rds[train_db_rds['emotion'] != 'neutral']['file_path'].tolist()
+    inp_list = [[neu_list, emo_list]]
+
+    # TODO: Remove dirty workaround for order checking (needed for sampler at the moment)
+    assert([emo.split('/')[-1] for emo in emo_list] == ['03-01-02-01-01-01-01.wav',
+                                                        '03-01-03-01-01-01-01.wav',
+                                                        '03-01-04-01-01-01-01.wav'])
     """
     inp_list = [['./RAVDESS/Actor_01/03-01-01-01-01-01-01.wav',
                  ['./RAVDESS/Actor_01/03-01-02-01-01-01-01.wav',
