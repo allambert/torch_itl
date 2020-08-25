@@ -1,5 +1,6 @@
-import numpy as np
+import sys
 import cv2
+import numpy as np
 from PIL import Image
 
 
@@ -81,12 +82,15 @@ def makeMorphs(theImage1, theList1, theList2, theList4):
 
 
 if __name__ == "__main__":
-    # im_path = "/home/mlpboon/Downloads/KDEF_and_AKDEF/KDEF/AF01/AF01NES.JPG"
+    # usage
+    # python face_transform.py im_path neu_lndmrks_path trans_lndmrks_path del_triangles_path output_path
+    # python face_transform.py "AF01NES.JPG" "AF01NES.txt" "pred_AF01AFS.txt" "del_triangles_AF01NES.txt" "afraid.jpg"
 
-    im_path = "jayneel.jpg"
-    neu_lndmrks_path = "jayneel.txt"
-    trans_lndmrks_path = "pred_relJAYHAS.txt"
-    del_triangles_path = "del_triangles_jayneel.txt"
+    im_path = sys.argv[1]
+    neu_lndmrks_path = sys.argv[2]
+    trans_lndmrks_path = sys.argv[3]
+    del_triangles_path = sys.argv[4]
+    output_path = sys.argv[5]
 
     theImage1 = cv2.imread(im_path)
 
@@ -95,7 +99,7 @@ if __name__ == "__main__":
     
     # Read in the points from a text file
     with open(neu_lndmrks_path) as file:
-        for line in file :
+        for line in file:
             x, y = line.split()
             points1.append((int(x), int(y)))
 
@@ -104,7 +108,7 @@ if __name__ == "__main__":
     
     # Read in the points from a text file
     with open(trans_lndmrks_path) as file:
-        for line in file :
+        for line in file:
             x, y = line.split()
             points2.append((int(x), int(y)))
     
@@ -117,3 +121,4 @@ if __name__ == "__main__":
             v1, v2, v3 = line.split()
             list4.append((int(v1), int(v2), int(v3)))
     res = makeMorphs(theImage1, points1, points2, list4)
+    res.save(output_path)

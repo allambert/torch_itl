@@ -2,8 +2,10 @@ import os
 from abc import ABC
 import numpy as np
 import pandas as pd
+import cv2
 
-base_folder_path = '/mnt/telecom1/emotional_speech_datasets'
+#base_folder_path = '/mnt/telecom1/emotional_speech_datasets'
+base_folder_path = '/home/mlpboon/Downloads'
 
 
 class EmotionalSpeechDataset(ABC):
@@ -142,3 +144,102 @@ class Ravdess(EmotionalSpeechDataset):
         print('data written to csv file')
         return
 
+
+class KdefData(EmotionalSpeechDataset):
+    def __init__(self, data_dir_name):
+        super(KdefData, self).__init__(data_dir_name)
+        self.sessions = ['A', 'B']
+        self.gender = ['F', 'M']
+        self.num_actors_per_gender = 35
+        self.emotions = ['AF', 'AN', 'DI', 'HA', 'SA', 'SU']
+        self.profile = ['S']
+        self.extension = '.JPG'
+
+    def create_metadata_csv(self):
+        pass
+
+    def get_kdef_metadata_tmp(self):
+        if os.path.exists('./KDEF/kdef_frontal_path_list.txt'):
+            return 'File already exists'
+        kdef_frontal_path_list = []
+        for i, sess in enumerate(self.sessions):
+            for j, gen in enumerate(self.gender):
+                for k in range(self.num_actors_per_gender):
+                    folder_name = sess + gen + str(k + 1).zfill(2)
+                    folder_path = os.path.join(self.data_path, folder_name)
+
+                    # neutral image
+                    neutral_image_path = os.path.join(folder_path, folder_name + 'NE' + self.profile[0] + self.extension)
+                    kdef_frontal_path_list.append(neutral_image_path)
+                    for e, emo in enumerate(self.emotions):
+                        emotion_image_path = os.path.join(folder_path, folder_name + emo + self.profile[0] + self.extension)
+                        kdef_frontal_path_list.append(emotion_image_path)
+
+        with open('./datasets/KDEF/kdef_frontal_path_list.txt', 'w') as f:
+            for fpath in kdef_frontal_path_list:
+                f.write('{}\n'.format(fpath))
+
+    def landmark_training_split(self):
+        outer_eye_alignment_idx = [36, 45]
+        x_train = []
+        y_train = []
+        y_tmp = []
+        landmarks_path = './datasets/KDEF/KDEF_LANDMARKS'
+        for i, sess in enumerate(self.sessions):
+            for j, gen in enumerate(self.gender):
+                for k in range(self.num_actors_per_gender):
+                    file_id = sess + gen + str(k + 1).zfill(2)
+
+                    # neutral image
+                    neu_lnd_path = os.path.join(landmarks_path, file_id + 'NE' + self.profile[0] + '.txt')
+                    with open(neu_lnd_path, 'r') as file:
+                        tmp_ne_feat = np.array([line.split() for line in file], dtype=np.float32)
+                    x_train.append(tmp_ne_feat.flatten())
+                    trans_to = tmp_ne_feat[outer_eye_alignment_idx]
+                    for e, emo in enumerate(self.emotions):
+                        emo_lnd_path = os.path.join(landmarks_path, file_id + emo + self.profile[0] + '.txt')
+                        with open(emo_lnd_path, 'r') as file:
+                            tmp_emo_feat1 = np.array([line.split() for line in file], dtype=np.float32)
+                        trans_from = tmp_emo_feat1[outer_eye_alignment_idx]
+                        tmp_emo_feat = self.transform_NDPoints(trans_from, trans_to, tmp_emo_feat1)
+                        y_tmp.append(tmp_emo_feat.flatten())
+                    y_train.append(y_tmp)
+                    y_tmp = []
+        np.save('./datasets/KDEF/input_landmarks_train.npy', np.array(x_train))
+        np.save('./datasets/KDEF/output_landmarks_train.npy', np.array(y_train))
+
+    # IN PROGRESS / NOT USABLE YET
+    def landmark_relative_training_split(self):
+        x_train = []
+        y_train = []
+        y_tmp = []
+        landmarks_path = './datasets/KDEF/KDEF_LANDMARKS'
+        for i, sess in enumerate(self.sessions):
+            for j, gen in enumerate(self.gender):
+                for k in range(self.num_actors_per_gender):
+                    file_id = sess + gen + str(k + 1).zfill(2)
+
+                    # neutral image
+                    neu_lnd_path = os.path.join(landmarks_path, file_id + 'NE' + self.profile[0] + '.txt')
+                    with open(neu_lnd_path, 'r') as file:
+                        tmp_ne_feat = np.array([line.split() for line in file], dtype=np.float32)
+                    rel_x, rel_y = tmp_ne_feat[0, 0], tmp_ne_feat[0, 1]
+                    tmp_ne_feat[:, 0] = tmp_ne_feat[:, 0] / rel_x
+                    tmp_ne_feat[:, 1] = tmp_ne_feat[:, 1] / rel_y
+                    x_train.append(tmp_ne_feat.flatten())
+                    for e, emo in enumerate(self.emotions):
+                        emo_lnd_path = os.path.join(landmarks_path, file_id + emo + self.profile[0] + '.txt')
+                        with open(emo_lnd_path, 'r') as file:
+                            tmp_emo_feat = np.array([line.split() for line in file], dtype=np.float32)
+                        tmp_emo_feat[:, 0] = tmp_emo_feat[:, 0] / rel_x
+                        tmp_emo_feat[:, 1] = tmp_emo_feat[:, 1] / rel_y
+                        y_tmp.append(tmp_emo_feat.flatten())
+                    y_train.append(y_tmp)
+                    y_tmp = []
+        np.save('./datasets/KDEF/input_landmarks_rel_train.npy', np.array(x_train))
+        np.save('./datasets/KDEF/output_landmarks_rel_train.npy', np.array(y_train))
+
+    def transform_NDPoints(self, trans_from, trans_to, src_trans):
+        m, _ = cv2.estimateAffinePartial2D(trans_from, trans_to)
+        dst = cv2.transform(src_trans[np.newaxis], m)
+        return np.squeeze(dst)
