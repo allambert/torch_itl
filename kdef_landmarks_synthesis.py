@@ -11,8 +11,8 @@ if kernel_input_learnable:
     ne_fa = 5  # num epochs fit alpha per NE
     ne_fki = 5  # num epochs fit kernel per NE
 else:
-    NE = 50
-    ne_fa = 1
+    NE = 1
+    ne_fa = 50
 
 print('Reading data')
 x_train, y_train, x_test, y_test = import_kdef_landmark_synthesis(dtype='aligned')
@@ -74,3 +74,4 @@ for ne in range(NE):
 
 pred_test1 = itl_estimator.model.forward(x_test, sampler_.sample(m))
 pred_test2 = itl_estimator.model.forward(x_test, torch.tensor([[0.866, 0.5]], dtype=torch.float))
+

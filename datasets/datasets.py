@@ -144,8 +144,8 @@ def import_kdef_synthesis():
 
 def import_kdef_landmark_synthesis(dtype='aligned'):
     if dtype == 'aligned':
-        X = np.load('./datasets/KDEF/input_landmarks_train.npy')
-        Y = np.load('./datasets/KDEF/output_landmarks_train.npy')
+        X = np.load('./datasets/KDEF/input_landmarks.npy')
+        Y = np.load('./datasets/KDEF/output_landmarks.npy')
         X = X / 562.
         Y = Y / 562.
     elif dtype == 'diff':
