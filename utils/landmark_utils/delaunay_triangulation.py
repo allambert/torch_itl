@@ -4,7 +4,8 @@ import cv2
 import sys
 
 image_path = sys.argv[1]
-output_folder = sys.argv[2]
+landmark_path = sys.argv[2]
+output_folder = sys.argv[3]
 
 
 # Check if a point is inside a rectangle
@@ -76,7 +77,7 @@ if __name__ == '__main__':
     points = []
     
     # Read in the points from a text file
-    with open(im_name+".txt") as file :
+    with open(landmark_path + im_name+".txt") as file :
         for line in file :
             x, y = line.split()
             points.append((int(x), int(y)))
@@ -96,6 +97,6 @@ if __name__ == '__main__':
     dictionary = {p[0]: p[1] for p in list(zip(points, range(68)))}
     # Draw delaunay triangles
     del_triangles = draw_delaunay(img, subdiv, dictionary);
-    with open("del_triangles_" + im_name + '.txt', 'w') as file:
+    with open(output_folder + "del_triangles_" + im_name + '.txt', 'w') as file:
         for v in range(len(del_triangles)):
             file.write("{} {} {}\n".format(del_triangles[v][0],del_triangles[v][1], del_triangles[v][2]))
