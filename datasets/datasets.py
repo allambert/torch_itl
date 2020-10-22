@@ -44,6 +44,7 @@ def import_data_toy_quantile(*args):
 
 
 def import_speech_synth_ravdess():
+    from sklearn.preprocessing import StandardScaler
     """
     db_rds = Ravdess('RAVDESS')
     db_rds.load_metadata_csv()
@@ -102,12 +103,16 @@ def import_speech_synth_ravdess():
     # y_train = torch.cat((y_train_emo, torch.unsqueeze(x_train, 1)), 1)
 
     x_train_npy = np.squeeze(np.concatenate((training_samples[0][0], training_samples[1][0])))
-    x_train = torch.from_numpy(x_train_npy).float()
-    y_train_npy = np.concatenate((training_samples[0][1], training_samples[1][1]))
-    m = y_train_npy.shape[1]
+    scaler = StandardScaler(with_std=True)
+    x_train_scaled = scaler.fit_transform(x_train_npy)
+    x_mean = scaler.mean_
+    x_train = torch.from_numpy(x_train_scaled).float()
+    y_train = torch.from_numpy(np.concatenate((training_samples[0][1], training_samples[1][1]))).float()
+
+    # m = y_train_npy.shape[1]
     # train for the difference
-    y_train = torch.from_numpy(y_train_npy - np.repeat(np.expand_dims(x_train_npy, axis=1), m, axis=1)).float()
-    return x_train, y_train
+    # y_train = torch.from_numpy(y_train_npy - np.repeat(np.expand_dims(x_train_npy, axis=1), m, axis=1)).float()
+    return x_train, y_train, x_mean
 
 
 def import_toy_synthesis(n_samples, n_theta):
@@ -146,6 +151,11 @@ def import_kdef_landmark_synthesis(dtype='aligned'):
     if dtype == 'aligned':
         X = np.load('./datasets/KDEF/input_landmarks.npy')
         Y = np.load('./datasets/KDEF/output_landmarks.npy')
+        X = X / 562.
+        Y = Y / 562.
+    if dtype == 'aligned2':
+        X = np.load('./datasets/KDEF/input_landmarks_align2.npy')
+        Y = np.load('./datasets/KDEF/output_landmarks_align2.npy')
         X = X / 562.
         Y = Y / 562.
     elif dtype == 'diff':
