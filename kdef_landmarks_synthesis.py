@@ -4,15 +4,27 @@ import time
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
-from datasets.datasets import import_kdef_landmark_synthesis
 from torch_itl import model, sampler, cost, kernel, estimator
 
 # ----------------------------------
 # Reading input/output data
 # ----------------------------------
+use_facealigner = True
+
+if use_facealigner:
+    from datasets.datasets import kdef_landmarks_facealigner
+else:
+    from datasets.datasets import import_kdef_landmark_synthesis
+
 print('Reading data')
-input_data_version = 'aligned2'
-x_train, y_train, x_test, y_test = import_kdef_landmark_synthesis(dtype=input_data_version)
+if use_facealigner:
+    input_data_version = 'facealigner'
+    x_train, y_train, x_test, y_test, train_list, test_list = \
+        kdef_landmarks_facealigner('./datasets/KDEF_Aligned/KDEF_LANDMARKS')
+else:
+    input_data_version = 'aligned2'
+    x_train, y_train, x_test, y_test = import_kdef_landmark_synthesis(dtype=input_data_version)
+
 n = x_train.shape[0]
 m = y_train.shape[1]
 nf = y_train.shape[2]
@@ -27,6 +39,7 @@ kernel_input_learnable = False
 output_var_dependence = False
 save_model = True
 plot_fig = True
+save_pred = False
 
 if kernel_input_learnable:
     NE = 10  # num epochs overall
@@ -137,9 +150,23 @@ if save_model:
 pred_test1 = itl_estimator.model.forward(x_test, sampler_.sample(m))
 pred_test2 = itl_estimator.model.forward(x_test, torch.tensor([[0.866, 0.5]], dtype=torch.float))
 
+if use_facealigner and save_pred:
+    pred_path = './datasets/KDEF_Aligned/ITL_LANDMARKS_PRED/kdef_itl_model_' + timestr
+    if not os.path.exists(pred_path):
+        os.makedirs(pred_path)
+    pred_test1_np = pred_test1.detach().numpy()
+    pred_test1_np = (pred_test1_np+1)*64
+    for i in range(pred_test1_np.shape[0]):
+        for j in range(pred_test1_np.shape[1]):
+            np.savetxt(os.path.join(pred_path, 'pred_' + test_list[i][1][j]),
+                       pred_test1_np[i, j].reshape(68, 2))
+
 if plot_fig:
     plt_x = x_test[0].numpy().reshape(68, 2)
-    plt_xt = pred_test1[0, 3].detach().numpy().reshape(68, 2)
+    plt_xt = pred_test1[0, 2].detach().numpy().reshape(68, 2)
+    if use_facealigner:
+        plt_x = 64*(plt_x + 1)
+        plt_xt = 64*(plt_xt + 1)
     plt_uv = plt_xt - plt_x
     plt.quiver(plt_x[:, 0], plt_x[:, 1], plt_uv[:, 0], plt_uv[:, 1], angles='xy')
     ax = plt.gca()

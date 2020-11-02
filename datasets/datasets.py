@@ -1,9 +1,10 @@
 import numpy as np
+import os
 import torch
 import pandas as pd
 
 from .synthetic_quantile import toy_data_quantile
-from .emotional_speech_datasets import Ravdess
+from .emotional_speech_datasets import Ravdess, KdefData
 from .emotional_speech_features import generate_training_samples
 
 np.random.seed(seed=21)
@@ -174,3 +175,71 @@ def import_kdef_landmark_synthesis(dtype='aligned'):
     y_test = Y[np.array([0, n_samples//2 - 1, n_samples//2, n_samples - 1])]
     return torch.from_numpy(x_train).float(), torch.from_numpy(y_train).float(), \
         torch.from_numpy(x_test).float(), torch.from_numpy(y_test).float()
+
+
+def kdef_landmarks_facealigner(path_to_landmarks):
+    # init lists
+    train_list = []
+    test_list = []
+    # generate ids + emotion lists (dataloader not trusted here)
+    fem_ids = ['F'+str(i).zfill(2) for i in range(1, 36)]
+    mal_ids = ['M'+str(i).zfill(2) for i in range(1, 36)]
+    all_ids = fem_ids + mal_ids
+    all_emotions = ['NE', 'AF', 'AN', 'DI', 'HA', 'SA', 'SU']
+    # set test identities
+    #test_identities = ['F01', 'F02', 'F03', 'M01', 'M02', 'M03']
+    test_identities = ['F01', 'M35']
+    for sess in ['A', 'B']:
+        for p in all_ids:
+            file_list = [sess + p + em + 'S.txt' for em in all_emotions]
+            if p not in test_identities:
+                train_list.append([file_list[0], file_list[1:]])
+            else:
+                test_list.append([file_list[0], file_list[1:]])
+
+    train_input = []
+    train_output = []
+    test_input = []
+    test_output = []
+
+    # read input/output train
+    for row in train_list:
+        tmp_ne = np.loadtxt(os.path.join(path_to_landmarks, row[0])).reshape(68, 2)
+        train_input.append(tmp_ne.flatten())
+        tmp_ems = []
+        for row_em in row[1]:
+            tmp_em = np.loadtxt(os.path.join(path_to_landmarks, row_em)).reshape(68, 2)
+            tmp_ems.append(tmp_em.flatten())
+        train_output.append(tmp_ems)
+
+    # read input/output test
+    for row in test_list:
+        tmp_ne = np.loadtxt(os.path.join(path_to_landmarks, row[0])).reshape(68,2)
+        test_input.append(tmp_ne.flatten())
+        tmp_ems = []
+        for row_em in row[1]:
+            tmp_em = np.loadtxt(os.path.join(path_to_landmarks, row_em)).reshape(68, 2)
+            tmp_ems.append(tmp_em.flatten())
+        test_output.append(tmp_ems)
+
+    # normalize between [-1,1]
+    im_size = 128
+    train_input = (2 * np.array(train_input)/im_size) - 1
+    train_output = (2 * np.array(train_output) / im_size) - 1
+    test_input = (2 * np.array(test_input) / im_size) - 1
+    test_output = (2 * np.array(test_output) / im_size) - 1
+
+    # normalize between [0,1]
+    # train_input = np.array(train_input)/im_size
+    # train_output = np.array(train_output) / im_size
+    # test_input = np.array(test_input) / im_size
+    # test_output = np.array(test_output) / im_size
+
+    # np.save('facealigner_train_input.npy', train_input)
+    # np.save('facealigner_train_output.npy', train_output)
+    # np.save('facealigner_test_input.npy', test_input)
+    # np.save('facealigner_test_output.npy', test_output)
+
+    return torch.from_numpy(train_input).float(), torch.from_numpy(train_output).float(),\
+           torch.from_numpy(test_input).float(), torch.from_numpy(test_output).float(), \
+           train_list, test_list
