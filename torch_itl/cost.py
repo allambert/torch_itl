@@ -46,6 +46,13 @@ def ploss_with_crossing(lbda_nc):
         return(ploss(y_true, y_pred, probs) + lbda_nc * closs(y_pred))
     return ploss_with_crossing_lbda
 
+
+def speech_synth_loss(y_true, y_pred, thetas):
+    residual = y_true - y_pred
+    n, m, _ = residual.shape
+    return torch.sum(residual**2) / n / m / 2
+
+
 class Cost(object):
 
     def __init__(self,signature_primal, signature_dual, Theta):

@@ -47,7 +47,12 @@ class ITLEstimator(object):
             self.losses = []
             self.times = [0]
 
-        optimizer_alpha = optim.LBFGS([self.model.alpha], **kwargs)
+        if solver == 'lbfgs':
+            optimizer_alpha = optim.LBFGS([self.model.alpha], **kwargs)
+        elif solver == 'sgd':
+            optimizer_alpha = optim.SGD([self.model.alpha], **kwargs)
+        elif solver == 'adam':
+            optimizer_alpha = optim.Adam([self.model.alpha], **kwargs)
 
         def closure_alpha():
             loss = self.objective(x_train, y_train, self.model.thetas)
