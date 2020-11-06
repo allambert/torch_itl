@@ -48,7 +48,7 @@ class FaceAligner:
 			# extract the left and right eye (x, y)-coordinates
 			(lStart, lEnd) = FACIAL_LANDMARKS_68_IDXS["left_eye"]
 			(rStart, rEnd) = FACIAL_LANDMARKS_68_IDXS["right_eye"]
-			
+
 		leftEyePts = shape[lStart:lEnd]
 		rightEyePts = shape[rStart:rEnd]
 
@@ -96,6 +96,7 @@ class FaceAligner:
 		# return the aligned face and lnd
 		return output, np.squeeze(output_lnd)
 
+#%%
 
 if __name__ == "__main__":
 
@@ -112,14 +113,21 @@ if __name__ == "__main__":
 		cv2.imwrite('aligned_face.jpg', output)
 	elif dataset == 'kdef':
 		# init aligner
+
 		fa = FaceAligner(desiredFaceWidth=128)
 
 		# get source info
-		source_data_csv = '/home/mlpboon/Downloads/KDEF_and_AKDEF/KDEF/KDEF.csv'
+		# Decompose the path into prefix and suffix so that it works independently of the user
+		prefix_torch_itl = '/Users/alambert/Recherche/ITL/code/torch_itl'
+		prefix_kdef_data = '/Users/alambert/Recherche/ITL/code/KDEF_AND_AKDEF/'
+		def shorten_path(path):
+			return path[39:]
+		source_data_csv = prefix_kdef_data + 'KDEF.csv'
 		df = pd.read_csv(source_data_csv)
+		df['file_path'] = df['file_path'].apply(shorten_path)
 		df_filter = df.loc[df['profile'] == 'S']
 
-		lnd_dir = '/home/mlpboon/post-doc/repositories/torch_itl/datasets/KDEF/KDEF_LANDMARKS'
+		lnd_dir = prefix_torch_itl + '/datasets/KDEF/KDEF_LANDMARKS'
 
 		# destination directory structure
 		dest_base_path = '../../datasets'
@@ -135,8 +143,8 @@ if __name__ == "__main__":
 
 			# read each image and landmarks
 			# ----file paths
-			im_path = row['file_path']
-			file_name = row['file_path'].split('/')[-1].split('.')[0]
+			im_path = prefix_kdef_data + row['file_path']
+			file_name = (prefix_kdef_data + row['file_path']).split('/')[-1].split('.')[0]
 			lnd_file_path = os.path.join(lnd_dir, file_name + '.txt')
 			# ----read_image
 			image = cv2.imread(im_path)
