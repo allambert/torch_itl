@@ -188,7 +188,7 @@ def kdef_landmarks_facealigner(path_to_landmarks):
     all_emotions = ['NE', 'AF', 'AN', 'DI', 'HA', 'SA', 'SU']
     # set test identities
     #test_identities = ['F01', 'F02', 'F03', 'M01', 'M02', 'M03']
-    test_identities = ['F01', 'M35']
+    test_identities = ['F01', 'F02', 'M34', 'M35']
     for sess in ['A', 'B']:
         for p in all_ids:
             file_list = [sess + p + em + 'S.txt' for em in all_emotions]
@@ -222,24 +222,44 @@ def kdef_landmarks_facealigner(path_to_landmarks):
             tmp_ems.append(tmp_em.flatten())
         test_output.append(tmp_ems)
 
-    # normalize between [-1,1]
+
     im_size = 128
-    train_input = (2 * np.array(train_input)/im_size) - 1
-    train_output = (2 * np.array(train_output) / im_size) - 1
-    test_input = (2 * np.array(test_input) / im_size) - 1
-    test_output = (2 * np.array(test_output) / im_size) - 1
+    # normalize between [-1,1]
+    # train_input = (2 * np.array(train_input)/im_size) - 1
+    # train_output = (2 * np.array(train_output) / im_size) - 1
+    # test_input = (2 * np.array(test_input) / im_size) - 1
+    # test_output = (2 * np.array(test_output) / im_size) - 1
 
     # normalize between [0,1]
-    # train_input = np.array(train_input)/im_size
-    # train_output = np.array(train_output) / im_size
-    # test_input = np.array(test_input) / im_size
-    # test_output = np.array(test_output) / im_size
+    train_input = np.array(train_input)/im_size
+    train_output = np.array(train_output) / im_size
+    test_input = np.array(test_input) / im_size
+    test_output = np.array(test_output) / im_size
 
     # np.save('facealigner_train_input.npy', train_input)
     # np.save('facealigner_train_output.npy', train_output)
     # np.save('facealigner_test_input.npy', test_input)
     # np.save('facealigner_test_output.npy', test_output)
 
+    # train_output = train_output - np.repeat(np.expand_dims(train_input, axis=1), 6, axis=1)
+    # test_output = test_output - np.repeat(np.expand_dims(test_input, axis=1), 6, axis=1)
     return torch.from_numpy(train_input).float(), torch.from_numpy(train_output).float(),\
            torch.from_numpy(test_input).float(), torch.from_numpy(test_output).float(), \
            train_list, test_list
+
+
+def import_affectnet_va_embedding(affect_net_csv_path):
+    df = pd.read_csv(affect_net_csv_path, header=None)
+    emo_dict = {0: 'Neutral',
+                1: 'Happy',
+                2: 'Sad',
+                3: 'Surprise',
+                4: 'Fear',
+                5: 'Disgust',
+                6: 'Anger',
+                7: 'Contempt'}
+    emo_va = {}
+    for key in emo_dict.keys():
+        emo_va[emo_dict[key]] = [df[df[6] == key][7].mean(),
+                                 df[df[6] == key][8].mean()]
+    return emo_va
