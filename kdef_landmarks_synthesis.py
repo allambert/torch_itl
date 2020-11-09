@@ -39,7 +39,7 @@ kernel_input_learnable = False
 output_var_dependence = False
 save_model = True
 plot_fig = True
-save_pred = False
+save_pred = True
 
 if kernel_input_learnable:
     NE = 10  # num epochs overall
@@ -92,7 +92,7 @@ cost_function = cost.speech_synth_loss
 lbda = 0.001
 
 # define emotion sampler
-sampler_ = sampler.CircularSampler(data='kdef')
+sampler_ = sampler.CircularSampler(data='KDEF')
 sampler_.m = m
 
 
@@ -155,7 +155,8 @@ if use_facealigner and save_pred:
     if not os.path.exists(pred_path):
         os.makedirs(pred_path)
     pred_test1_np = pred_test1.detach().numpy()
-    pred_test1_np = (pred_test1_np+1)*64
+    # x_test_np = np.repeat(x_test.numpy()[:, np.newaxis, :], 6, axis=1)
+    pred_test1_np = pred_test1_np*128
     for i in range(pred_test1_np.shape[0]):
         for j in range(pred_test1_np.shape[1]):
             np.savetxt(os.path.join(pred_path, 'pred_' + test_list[i][1][j]),
