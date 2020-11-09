@@ -37,7 +37,7 @@ class CircularSampler(object):
         if data == 'KDEFaff':
             self.emo_list = ['Fear', 'Anger', 'Disgust', 'Happy', 'Sad', 'Surprise']
         elif data == 'Rafdaff':
-            self.emo_list = ['Angry', 'Contempt', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise']
+            self.emo_list = ['Anger', 'Contempt', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise']
 
     def sample(self, m):
         # angles = torch.linspace(a, b, m)

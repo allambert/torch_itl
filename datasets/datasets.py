@@ -264,8 +264,8 @@ def rafd_landmarks_facealigner(path_to_landmarks, path_to_csv, inc_neutral=False
 
     for i in range(len(all_ids)):
         fnames = sorted_lnd_list[i*num_emos: (i+1)*num_emos]
-        print(fnames)
-        print(all_ids[i])
+        # print(fnames)
+        # print(all_ids[i])
         assert set([fn[8:10] for fn in fnames]) == set([all_ids[i]])
         assert set([fn.split('_')[4] for fn in fnames]) == set(all_emotions)
         neu_im = fnames.pop(5)
