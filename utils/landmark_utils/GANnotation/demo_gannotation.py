@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import utils
 import cv2
 import torch
+import sys
 
 """
 Original Code - Commented
@@ -28,9 +29,10 @@ np.savetxt('test_1_cropped.txt', cropped_pts.reshape((132,-1)).transpose())
 """
 
 # Set paths
-neu_im_path = "/home/mlpboon/post-doc/repositories/torch_itl/datasets/KDEF_Aligned/KDEF/AM35/AM35NES.JPG"                                                         
-emo_lnd_path = "/home/mlpboon/post-doc/repositories/torch_itl/datasets/KDEF_Aligned/ITL_LANDMARKS_PRED/kdef_itl_model_20201103-104155/pred_AM35SUS.txt"
-out_im_path = "image35__pred_su.jpg"
+# run demo_gannotation neutral_path, emotional_landmark_path, output_path
+neu_im_path = sys.argv[1]
+emo_lnd_path = sys.argv[2]
+out_im_path = sys.argv[3]
 
 # Set model
 myGAN = GANnotation.GANnotation(path_to_model='myGEN.pth', enable_cuda=False)
