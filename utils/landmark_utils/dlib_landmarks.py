@@ -29,7 +29,7 @@ detector = dlib.get_frontal_face_detector()
 predictor = dlib.shape_predictor(predictor_path)
 # win = dlib.image_window()
 
-if len(faces_paths_file.split('/')[-1].split('.')) == 1:
+if faces_paths_file.split('/')[-1].split('.')[-1] == 'txt':
     with open(faces_paths_file, 'r') as file:
         file_list = [line.rstrip('\n') for line in file]
 else:

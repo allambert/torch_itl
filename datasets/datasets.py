@@ -177,7 +177,7 @@ def import_kdef_landmark_synthesis(dtype='aligned'):
         torch.from_numpy(x_test).float(), torch.from_numpy(y_test).float()
 
 
-def kdef_landmarks_facealigner(path_to_landmarks):
+def kdef_landmarks_facealigner(path_to_landmarks, inc_neutral=False):
     # init lists
     train_list = []
     test_list = []
@@ -185,17 +185,21 @@ def kdef_landmarks_facealigner(path_to_landmarks):
     fem_ids = ['F'+str(i).zfill(2) for i in range(1, 36)]
     mal_ids = ['M'+str(i).zfill(2) for i in range(1, 36)]
     all_ids = fem_ids + mal_ids
-    all_emotions = ['NE', 'AF', 'AN', 'DI', 'HA', 'SA', 'SU']
+    all_emotions = ['AF', 'AN', 'DI', 'HA', 'SA', 'SU', 'NE']
     # set test identities
     #test_identities = ['F01', 'F02', 'F03', 'M01', 'M02', 'M03']
-    test_identities = ['F01', 'M35']
+    test_identities = ['F01', 'F02', 'M34', 'M35']
     for sess in ['A', 'B']:
         for p in all_ids:
             file_list = [sess + p + em + 'S.txt' for em in all_emotions]
-            if p not in test_identities:
-                train_list.append([file_list[0], file_list[1:]])
+            if inc_neutral:
+                xy_pair = [file_list[-1], file_list]
             else:
-                test_list.append([file_list[0], file_list[1:]])
+                xy_pair = [file_list[-1], file_list[0:len(all_emotions)-1]]
+            if p not in test_identities:
+                train_list.append(xy_pair)
+            else:
+                test_list.append(xy_pair)
 
     train_input = []
     train_output = []
@@ -222,24 +226,104 @@ def kdef_landmarks_facealigner(path_to_landmarks):
             tmp_ems.append(tmp_em.flatten())
         test_output.append(tmp_ems)
 
-    # normalize between [-1,1]
+
     im_size = 128
-    train_input = (2 * np.array(train_input)/im_size) - 1
-    train_output = (2 * np.array(train_output) / im_size) - 1
-    test_input = (2 * np.array(test_input) / im_size) - 1
-    test_output = (2 * np.array(test_output) / im_size) - 1
+    # normalize between [-1,1]
+    # train_input = (2 * np.array(train_input)/im_size) - 1
+    # train_output = (2 * np.array(train_output) / im_size) - 1
+    # test_input = (2 * np.array(test_input) / im_size) - 1
+    # test_output = (2 * np.array(test_output) / im_size) - 1
 
     # normalize between [0,1]
-    # train_input = np.array(train_input)/im_size
-    # train_output = np.array(train_output) / im_size
-    # test_input = np.array(test_input) / im_size
-    # test_output = np.array(test_output) / im_size
+    train_input = np.array(train_input)/im_size
+    train_output = np.array(train_output) / im_size
+    test_input = np.array(test_input) / im_size
+    test_output = np.array(test_output) / im_size
 
     # np.save('facealigner_train_input.npy', train_input)
     # np.save('facealigner_train_output.npy', train_output)
     # np.save('facealigner_test_input.npy', test_input)
     # np.save('facealigner_test_output.npy', test_output)
 
+    # train_output = train_output - np.repeat(np.expand_dims(train_input, axis=1), 6, axis=1)
+    # test_output = test_output - np.repeat(np.expand_dims(test_input, axis=1), 6, axis=1)
     return torch.from_numpy(train_input).float(), torch.from_numpy(train_output).float(),\
            torch.from_numpy(test_input).float(), torch.from_numpy(test_output).float(), \
            train_list, test_list
+
+
+def rafd_landmarks_facealigner(path_to_landmarks, path_to_csv, inc_neutral=False):
+    train_list = []
+    test_list = []
+    all_ids = [str(i).zfill(2) for i in pd.read_csv(path_to_csv)['speaker'].unique().tolist()]
+    test_ids = ['01', '02']
+    all_emotions = ['angry', 'contemptuous', 'disgusted', 'fearful', 'happy', 'neutral', 'sad', 'surprised']
+    num_emos = len(all_emotions)
+    print(num_emos)
+    sorted_lnd_list = sorted(os.listdir(path_to_landmarks))
+
+    for i in range(len(all_ids)):
+        fnames = sorted_lnd_list[i*num_emos: (i+1)*num_emos]
+        # print(fnames)
+        # print(all_ids[i])
+        assert set([fn[8:10] for fn in fnames]) == set([all_ids[i]])
+        assert set([fn.split('_')[4] for fn in fnames]) == set(all_emotions)
+        neu_im = fnames.pop(5)
+        if inc_neutral:
+            fnames.append(neu_im)
+        if fnames[0][8:10] not in test_ids:
+            train_list.append([neu_im, fnames])
+        else:
+            test_list.append([neu_im, fnames])
+
+    train_input = []
+    train_output = []
+    test_input = []
+    test_output = []
+
+    # read input/output train
+    for row in train_list:
+        tmp_ne = np.loadtxt(os.path.join(path_to_landmarks, row[0])).reshape(68, 2)
+        train_input.append(tmp_ne.flatten())
+        tmp_ems = []
+        for row_em in row[1]:
+            tmp_em = np.loadtxt(os.path.join(path_to_landmarks, row_em)).reshape(68, 2)
+            tmp_ems.append(tmp_em.flatten())
+        train_output.append(tmp_ems)
+
+    # read input/output test
+    for row in test_list:
+        tmp_ne = np.loadtxt(os.path.join(path_to_landmarks, row[0])).reshape(68,2)
+        test_input.append(tmp_ne.flatten())
+        tmp_ems = []
+        for row_em in row[1]:
+            tmp_em = np.loadtxt(os.path.join(path_to_landmarks, row_em)).reshape(68, 2)
+            tmp_ems.append(tmp_em.flatten())
+        test_output.append(tmp_ems)
+    im_size = 128
+    # normalize between [0,1]
+    train_input = np.array(train_input) / im_size
+    train_output = np.array(train_output) / im_size
+    test_input = np.array(test_input) / im_size
+    test_output = np.array(test_output) / im_size
+    return torch.from_numpy(train_input).float(), torch.from_numpy(train_output).float(), \
+           torch.from_numpy(test_input).float(), torch.from_numpy(test_output).float(), \
+           train_list, test_list
+
+
+def import_affectnet_va_embedding(affect_net_csv_path):
+    df = pd.read_csv(affect_net_csv_path, header=None)
+    emo_dict = {0: 'Neutral',
+                1: 'Happy',
+                2: 'Sad',
+                3: 'Surprise',
+                4: 'Fear',
+                5: 'Disgust',
+                6: 'Anger',
+                7: 'Contempt'}
+    emo_va = {}
+    for key in emo_dict.keys():
+        emo_va[emo_dict[key]] = [df[df[6] == key][7].mean(),
+                                 df[df[6] == key][8].mean()]
+    return emo_va
+

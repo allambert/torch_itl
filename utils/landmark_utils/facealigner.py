@@ -100,7 +100,7 @@ class FaceAligner:
 
 if __name__ == "__main__":
 
-	dataset = 'kdef'
+	dataset = 'rafd'
 	if dataset == 'try':
 		fa = FaceAligner()
 		im_path = '/home/mlpboon/Downloads/KDEF_and_AKDEF/KDEF/AF01/AF01NES.JPG'
@@ -159,6 +159,51 @@ if __name__ == "__main__":
 			row_lndpath = os.path.join(dest_sub_folder_lndpath, file_name + '.txt')
 			if not os.path.exists(row_datafolder):
 				os.mkdir(row_datafolder)
+			cv2.imwrite(row_impath, image_aligned)
+			with open(row_lndpath, 'w') as file:
+				for idx_l in range(68):
+					file.write("{} {}\n".format(points_aligned[idx_l, 0], points_aligned[idx_l, 1]))
+	elif dataset == 'rafd':
+		# init face aligner
+		fa = FaceAligner(desiredFaceWidth=128)
+
+		# set path prefix
+		prefix_torch_itl = '/home/mlpboon/post-doc/repositories/torch_itl'
+		prefix_rafd_data = '/home/mlpboon/Downloads/'
+		lnd_dir = os.path.join(prefix_torch_itl , 'datasets/Rafd/Rafd_LANDMARKS')
+		# get rafd csv and frontal face list
+		df = pd.read_csv(os.path.join(prefix_rafd_data, 'Rafd/Rafd.csv'))
+		df_filter = df.loc[(df['gaze'] == 'frontal') &
+										(df['profile'] == 90)]
+		# destination directory structure
+		dest_base_path = '../../datasets'
+		dest_parent_folder_path = os.path.join(dest_base_path, 'Rafd_Aligned')
+		dest_sub_folder_datapath = os.path.join(dest_parent_folder_path, 'Rafd')
+		dest_sub_folder_lndpath = os.path.join(dest_parent_folder_path, 'Rafd_LANDMARKS')
+
+		if not os.path.exists(dest_parent_folder_path):
+			os.makedirs(dest_sub_folder_datapath)
+			os.makedirs(dest_sub_folder_lndpath)
+
+		for index, row in df_filter.iterrows():
+
+			# read each image and landmarks
+			# ----file paths
+			im_path = prefix_rafd_data + row['file_path']
+			file_name = row['file_path'].split('/')[-1].split('.')[0]
+			lnd_file_path = os.path.join(lnd_dir, file_name + '.txt')
+			# ----read_image
+			image = cv2.imread(im_path)
+			# get landmarks
+			points = np.loadtxt(lnd_file_path).reshape(68, 2)
+			# compute alignment
+			image_aligned, points_aligned = fa.align(image, points)
+
+			# store back in a folder structure similar to Rafd
+
+			row_impath = os.path.join(dest_sub_folder_datapath, file_name + '.JPG')
+			row_lndpath = os.path.join(dest_sub_folder_lndpath, file_name + '.txt')
+
 			cv2.imwrite(row_impath, image_aligned)
 			with open(row_lndpath, 'w') as file:
 				for idx_l in range(68):
