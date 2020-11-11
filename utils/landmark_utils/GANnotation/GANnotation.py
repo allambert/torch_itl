@@ -21,8 +21,8 @@ class GANnotation:
         self.GEN.eval()
 
         
-    def reenactment(self,image,videocoords):
-        #image, points = utils.process_image(image,coords,angle=0, flip=False, sigma=1,size=128, tight=16) # do this outside
+    def reenactment(self,image,videocoords, coords):
+        image = utils.process_image(image,coords,angle=0, flip=False, sigma=1,size=128, tight=16) # do this outside
         frame_w = int(np.floor(2*videocoords.max()))
         frame = np.zeros((frame_w,frame_w,3))
         if videocoords.ndim == 2:

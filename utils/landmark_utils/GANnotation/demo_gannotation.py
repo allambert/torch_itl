@@ -29,23 +29,32 @@ np.savetxt('test_1_cropped.txt', cropped_pts.reshape((132,-1)).transpose())
 """
 
 # Set paths
-# run demo_gannotation neutral_path, emotional_landmark_path, output_path
+# run demo_gannotation neutral_path, neutral_landmark_path, emotional_landmark_path, output_path
 neu_im_path = sys.argv[1]
-emo_lnd_path = sys.argv[2]
-out_im_path = sys.argv[3]
+neu_lnd_path = sys.argv[2]
+emo_lnd_path = sys.argv[3]
+out_im_path = sys.argv[4]
 
 # Set model
 myGAN = GANnotation.GANnotation(path_to_model='myGEN.pth', enable_cuda=False)
-# Read points and image
+
+# Read neutral points
+neu_points = np.loadtxt(neu_lnd_path).reshape(68,2,-1)
+neu_points_concat = np.concatenate((neu_points[0:60], neu_points[61:64], neu_points[65:]))
+
+# Read emotional points
 points = np.loadtxt(emo_lnd_path).reshape(68,2,-1)
 points_concat = np.concatenate((points[0:60], points[61:64], points[65:]))
 
+# Read image
 image = cv2.cvtColor(cv2.imread(neu_im_path),cv2.COLOR_BGR2RGB)
-image = image/255.0
-image = torch.from_numpy(image.swapaxes(2,1).swapaxes(1,0))
-image = image.type_as(torch.FloatTensor())
 
-images, cropped_pts = myGAN.reenactment(image,points_concat)
+#image = image/255.0
+#image = torch.from_numpy(image.swapaxes(2,1).swapaxes(1,0))
+#image = image.type_as(torch.FloatTensor())
+
+# Run through network
+images, cropped_pts = myGAN.reenactment(image,points_concat, neu_points_concat)
 # Write output
 cv2.imwrite(out_im_path, cv2.cvtColor(images[0], cv2.COLOR_RGB2BGR))
 
