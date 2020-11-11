@@ -44,12 +44,14 @@ m = y_train.shape[1]
 nf = y_train.shape[2]
 print('data dimensions', n, m, nf)
 
+#%%
 # ----------------------------------
 # Set kernel and other params
 # ----------------------------------
 
+#%%
 kernel_input_learnable = False
-output_var_dependence = False
+output_var_dependence = True
 save_model = True
 plot_fig = True
 save_pred = True
@@ -81,29 +83,42 @@ else:
     gamma_inp = 3.0
     kernel_input = kernel.Gaussian(gamma_inp)
 
+y_bar = y_train.mean(axis=1)
+y_bar.shape
+A = torch.zeros(nf,nf)
+G_x = kernel_input.compute_gram(x_train)
+for i in range(n):
+    for j in range(n):
+        A += G_x[i,j]*(y_bar[i].view(-1,1) @ y_bar[j].view(-1,1).T)
+
+A /= A.norm()
+A*= np.sqrt(n)
+B = A.inverse()
+
+B = B/B.norm()
+
+B.norm()
+
 # define emotion kernel
 gamma_out = 1.0
 kernel_output = kernel.Gaussian(gamma_out)
 
+#%%
 # Define PSD matrix on output variables
-if output_var_dependence:
-    kernel_freq = np.load('output_kernel_matrix_kdef2.npy')
-else:
-    kernel_freq = np.eye(nf)
 
+kernel_freq = B
 # learning rate of alpha
-lr_alpha = 0.01
-
+lr_alpha = 0.001
 #%%
 # ----------------------------------
 # Define model
 # ----------------------------------
 itl_model = model.SpeechSynthesisKernelModel(kernel_input, kernel_output,
-                                             kernel_freq=torch.from_numpy(kernel_freq).float())
+                                             kernel_freq=kernel_freq)
 
 # define cost function
 cost_function = cost.speech_synth_loss
-lbda = 0.001
+lbda = 0.00001
 
 # define emotion sampler
 if theta_type == 'aff':
@@ -120,7 +135,6 @@ sampler_.m = m
 
 itl_estimator = estimator.ITLEstimator(itl_model,
                                        cost_function, lbda, sampler_)
-
 
 #%%
 # ----------------------------------
@@ -170,7 +184,6 @@ if save_model:
 
     with open(PARAM_PATH, 'w') as param_file:
         json.dump(PARAM_DICT, param_file)
-
 #%%
 # ----------------------------------
 # Predict and visualize
@@ -205,9 +218,6 @@ if plot_fig:
 print("done")
 
 #%%
-# ----------------------------------
-# Provide Risk
-# -----------------------------------
 plt.figure()
 plt.plot(itl_estimator.losses)
 plt.show()
