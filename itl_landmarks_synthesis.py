@@ -193,7 +193,7 @@ if use_facealigner and save_pred:
 
 if plot_fig:
     plt_x = x_test[0].numpy().reshape(68, 2)
-    plt_xt = pred_test1[0, 3].detach().numpy().reshape(68, 2)
+    plt_xt = pred_test1[0, 5].detach().numpy().reshape(68, 2)
     if use_facealigner:
         plt_x = plt_x * 128
         plt_xt = plt_xt * 128

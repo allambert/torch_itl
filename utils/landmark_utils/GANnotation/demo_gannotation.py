@@ -57,4 +57,3 @@ image = cv2.cvtColor(cv2.imread(neu_im_path),cv2.COLOR_BGR2RGB)
 images, cropped_pts = myGAN.reenactment(image,points_concat, neu_points_concat)
 # Write output
 cv2.imwrite(out_im_path, cv2.cvtColor(images[0], cv2.COLOR_RGB2BGR))
-

@@ -83,16 +83,31 @@ else:
     gamma_inp = 3.0
     kernel_input = kernel.Gaussian(gamma_inp)
 
+x_bar = x_train.reshape(132,68,2)
+def block_diagonal_mask(A):
+    m = A.shape[0]
+    tmp = torch.zeros(136,136)
+    tmp = torch.block_diag([torch.Tensor([[1.,1.],[1.,1.]]) for i in range(n/2)])
 y_bar = y_train.mean(axis=1)
 y_bar.shape
+
+tmp = torch.zeros(136,136)
+for i in range(68):
+    tmp[2*i,2*i] = 1
+    tmp[2*i + 1,2*i] = 1
+    tmp[2*i,2*i + 1] =1
+    tmp[2*i +1,2*i + 1] = 1
+
+tmp
+
 A = torch.zeros(nf,nf)
 G_x = kernel_input.compute_gram(x_train)
 for i in range(n):
-    for j in range(n):
-        A += G_x[i,j]*(y_bar[i].view(-1,1) @ y_bar[j].view(-1,1).T)
+    A += y_bar[i].view(-1,1) @ y_bar[i].view(-1,1).T
 
+A = tmp*A
 A /= A.norm()
-A*= np.sqrt(n)
+A.norm()
 B = A.inverse()
 
 B = B/B.norm()
@@ -106,7 +121,7 @@ kernel_output = kernel.Gaussian(gamma_out)
 #%%
 # Define PSD matrix on output variables
 
-kernel_freq = B
+kernel_freq = A
 # learning rate of alpha
 lr_alpha = 0.001
 #%%
@@ -118,7 +133,7 @@ itl_model = model.SpeechSynthesisKernelModel(kernel_input, kernel_output,
 
 # define cost function
 cost_function = cost.speech_synth_loss
-lbda = 0.00001
+lbda = 0.001
 
 # define emotion sampler
 if theta_type == 'aff':
@@ -141,6 +156,7 @@ itl_estimator = estimator.ITLEstimator(itl_model,
 # Training
 # ----------------------------------
 
+#itl_estimator.lbda = lbda
 for ne in range(NE):
     itl_estimator.fit_alpha(x_train, y_train, n_epochs=ne_fa,
                         lr=lr_alpha, line_search_fn='strong_wolfe', warm_start=True)
@@ -206,7 +222,7 @@ if use_facealigner and save_pred:
 
 if plot_fig:
     plt_x = x_test[0].numpy().reshape(68, 2)
-    plt_xt = pred_test1[0, 3].detach().numpy().reshape(68, 2)
+    plt_xt = pred_test1[0, 1].detach().numpy().reshape(68, 2)
     if use_facealigner:
         plt_x = plt_x * 128
         plt_xt = plt_xt * 128
@@ -221,5 +237,7 @@ print("done")
 plt.figure()
 plt.plot(itl_estimator.losses)
 plt.show()
-print("Empirical Risk:", itl_estimator.cost(y_test, pred_test1, sampler_.sample(m)))
+print("Empirical Risk:", itl_estimator.cost(y_train, itl_estimator.model.forward(x_train, sampler_.sample(m)), sampler_.sample(m)))
 print("Estimator Norm:", itl_estimator.model.vv_norm())
+
+itl_estimator.objective(x_train, y_train, sampler_.sample(m))
