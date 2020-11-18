@@ -91,6 +91,7 @@ def block_diagonal_mask(A):
 y_bar = y_train.mean(axis=1)
 y_bar.shape
 
+
 tmp = torch.zeros(136,136)
 for i in range(68):
     tmp[2*i,2*i] = 1
