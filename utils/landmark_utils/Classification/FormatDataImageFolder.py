@@ -114,6 +114,10 @@ def FormatLndITLImageFolder(test_neu_folder, emo_lnd_folder, out_folder, dataset
                 os.makedirs(emo_out_path)
             if dataset_name == 'KDEF':
                 fname_emo = prefix_string + filename[0:4] + emo + 'S'
+            elif dataset_name == 'Rafd':
+                filename_split = filename.split('_')
+                filename_split[4] = emo
+                fname_emo = prefix_string + '_'.join(filename_split)
             emo_lnd_file = os.path.join(emo_lnd_folder, fname_emo + '.txt')
             lnd = np.loadtxt(emo_lnd_file).reshape(68, 2)
             lnd_img = EM(lnd)
@@ -191,26 +195,37 @@ def FormatSynthForImageFolder(test_neu_folder, test_lnd_folder, emo_lnd_folder,
 
 if __name__ == "__main__":
     task = 'edgemapITL'
+    dataset_name = 'Rafd'
+
     if task == 'classify':
-        data_csv_path = '../../../datasets/KDEF_Aligned/KDEF/KDEF.csv'
-        dataset_name = 'KDEF'
-        FormatForImageFolder(data_csv_path, dataset_name, 0.1)
+        if dataset_name == 'KDEF':
+            data_csv_path = '../../../datasets/KDEF_Aligned/KDEF/KDEF.csv'
+            FormatForImageFolder(data_csv_path, dataset_name, 0.1)
     elif task == 'synth':
-        neu_img_folder = './KDEF_Classification/test/NE'
-        neu_lnd_folder = '../../../datasets/KDEF_Aligned/KDEF_LANDMARKS'
-        emo_lnd_folder = '../../../LS_Experiments/KDEF_itl_model_20201116-165010/predictions/KDEF'
-        out_folder = './SynthPredKDEF_itl_model_20201116-165010'
-        use_gt=False
-        dataset_name = 'KDEF'
-        FormatSynthForImageFolder(neu_img_folder, neu_lnd_folder, emo_lnd_folder, out_folder, dataset_name, use_gt=use_gt)
+        if dataset_name == 'KDEF':
+            neu_img_folder = './KDEF_Classification/test/NE'
+            neu_lnd_folder = '../../../datasets/KDEF_Aligned/KDEF_LANDMARKS'
+            emo_lnd_folder = '../../../LS_Experiments/KDEF_itl_model_20201116-165010/predictions/KDEF'
+            out_folder = './SynthPredKDEF_itl_model_20201116-165010'
+            use_gt=False
+            FormatSynthForImageFolder(neu_img_folder, neu_lnd_folder, emo_lnd_folder, out_folder, dataset_name, use_gt=use_gt)
     elif task == 'edgemap':
-        lnd_folder = '../../../datasets/KDEF_Aligned/KDEF_LANDMARKS'
-        data_csv_path = '../../../datasets/KDEF_Aligned/KDEF/KDEF.csv'
-        dataset_name = 'KDEF'
-        FormatLndImageFolder(data_csv_path, lnd_folder, dataset_name, 0.1)
+        if dataset_name == 'KDEF':
+            lnd_folder = '../../../datasets/KDEF_Aligned/KDEF_LANDMARKS'
+            data_csv_path = '../../../datasets/KDEF_Aligned/KDEF/KDEF.csv'
+            FormatLndImageFolder(data_csv_path, lnd_folder, dataset_name, 0.1)
+        elif dataset_name == 'Rafd':
+            lnd_folder = '../../../datasets/Rafd_Aligned/Rafd_LANDMARKS'
+            data_csv_path = '../../../datasets/Rafd_Aligned/Rafd/Rafd.csv'
+            FormatLndImageFolder(data_csv_path, lnd_folder, dataset_name, 0.1)
     elif task == 'edgemapITL':
-        neu_img_folder = './KDEF_LandmarkClassification/test/NE'
-        emo_lnd_folder = '../../../LS_Experiments/KDEF_itl_model_20201116-165010/predictions/KDEF'
-        out_folder = './LndPredKDEF_itl_model_20201116-165010'
-        dataset_name = 'KDEF'
-        FormatLndITLImageFolder(neu_img_folder, emo_lnd_folder, out_folder, dataset_name)
+        if dataset_name == 'KDEF':
+            neu_img_folder = './KDEF_LandmarkClassification/test/NE'
+            emo_lnd_folder = '../../../LS_Experiments/KDEF_itl_model_20201116-165010/predictions/KDEF'
+            out_folder = './LndPredKDEF_itl_model_20201116-165010'
+            FormatLndITLImageFolder(neu_img_folder, emo_lnd_folder, out_folder, dataset_name)
+        elif dataset_name == 'Rafd':
+            neu_img_folder = './Rafd_LandmarkClassification/test/neutral'
+            emo_lnd_folder = '../../../LS_Experiments/Rafd_itl_model_20201118-110809/predictions/Rafd'
+            out_folder = './LndPredRafd_itl_model_20201118-110809'
+            FormatLndITLImageFolder(neu_img_folder, emo_lnd_folder, out_folder, dataset_name)
