@@ -188,7 +188,7 @@ def kdef_landmarks_facealigner(path_to_landmarks, inc_neutral=False):
     all_emotions = ['AF', 'AN', 'DI', 'HA', 'SA', 'SU', 'NE']
     # set test identities
     #test_identities = ['F01', 'F02', 'F03', 'M01', 'M02', 'M03']
-    test_identities = ['F01', 'F02', 'M34', 'M35']
+    test_identities = ["F22", "M19", "M34", "M02", "M27", "F28", "M26"]
     for sess in ['A', 'B']:
         for p in all_ids:
             file_list = [sess + p + em + 'S.txt' for em in all_emotions]
@@ -256,7 +256,7 @@ def rafd_landmarks_facealigner(path_to_landmarks, path_to_csv, inc_neutral=False
     train_list = []
     test_list = []
     all_ids = [str(i).zfill(2) for i in pd.read_csv(path_to_csv)['speaker'].unique().tolist()]
-    test_ids = ['01', '02']
+    test_ids = ['25', '58', '72', '41', '35', '71']
     all_emotions = ['angry', 'contemptuous', 'disgusted', 'fearful', 'happy', 'neutral', 'sad', 'surprised']
     num_emos = len(all_emotions)
     print(num_emos)
@@ -312,18 +312,28 @@ def rafd_landmarks_facealigner(path_to_landmarks, path_to_csv, inc_neutral=False
 
 
 def import_affectnet_va_embedding(affect_net_csv_path):
-    df = pd.read_csv(affect_net_csv_path, header=None)
-    emo_dict = {0: 'Neutral',
-                1: 'Happy',
-                2: 'Sad',
-                3: 'Surprise',
-                4: 'Fear',
-                5: 'Disgust',
-                6: 'Anger',
-                7: 'Contempt'}
-    emo_va = {}
-    for key in emo_dict.keys():
-        emo_va[emo_dict[key]] = [df[df[6] == key][7].mean(),
-                                 df[df[6] == key][8].mean()]
+    if not affect_net_csv_path == '':
+        df = pd.read_csv(affect_net_csv_path, header=None)
+        emo_dict = {0: 'Neutral',
+                    1: 'Happy',
+                    2: 'Sad',
+                    3: 'Surprise',
+                    4: 'Fear',
+                    5: 'Disgust',
+                    6: 'Anger',
+                    7: 'Contempt'}
+        emo_va = {}
+        for key in emo_dict.keys():
+            emo_va[emo_dict[key]] = [df[df[6] == key][7].mean(),
+                                     df[df[6] == key][8].mean()]
+    else:
+        emo_va = {'Neutral': [-0.06249655698883391, -0.019669702033559486],
+         'Happy': [0.6647930758154823, 0.07025315235958239],
+         'Sad': [-0.6364936709598201, -0.25688320447600566],
+         'Surprise': [0.17960005233680493, 0.6894792038743631],
+         'Fear': [-0.1253752865553082, 0.7655788112100937],
+         'Disgust': [-0.6943645673378837, 0.457145871269001],
+         'Anger': [-0.452336028803629, 0.5656012294430937],
+         'Contempt': [-0.5138537435929467, 0.5825553992724378]}
     return emo_va
 

@@ -125,6 +125,13 @@ class SpeechSynthesisKernelModel(Model):
             self.alpha = torch.randn(
                 (self.n, self.m, self.num_freq), requires_grad=True)
 
+    def test_mode(self, x_train, thetas, alpha):
+        self.n = x_train.shape[0]
+        self.m = thetas.shape[0]
+        self.x_train = x_train
+        self.thetas = thetas
+        self.alpha = alpha
+
     @staticmethod
     def kronecker_product(matrix1, matrix2):
         return torch.ger(matrix1.view(-1), matrix2.view(-1)).reshape(*(matrix1.size() + matrix2.size())).permute(
