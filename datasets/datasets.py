@@ -177,25 +177,37 @@ def import_kdef_landmark_synthesis(dtype='aligned'):
         torch.from_numpy(x_test).float(), torch.from_numpy(y_test).float()
 
 
-def kdef_landmarks_facealigner(path_to_landmarks, inc_neutral=False):
+def kdef_landmarks_facealigner(path_to_landmarks, inp_emotion='NE', inc_emotion=False, relative=False):
     # init lists
     train_list = []
     test_list = []
+
     # generate ids + emotion lists (dataloader not trusted here)
     fem_ids = ['F'+str(i).zfill(2) for i in range(1, 36)]
     mal_ids = ['M'+str(i).zfill(2) for i in range(1, 36)]
     all_ids = fem_ids + mal_ids
-    all_emotions = ['AF', 'AN', 'DI', 'HA', 'SA', 'SU', 'NE']
+
+
     # set test identities
-    #test_identities = ['F01', 'F02', 'F03', 'M01', 'M02', 'M03']
+    # test_identities = ['F01', 'F02', 'F03', 'M01', 'M02', 'M03']
     test_identities = ["F22", "M19", "M34", "M02", "M27", "F28", "M26"]
+
+    # define emotion list, same as in sampler (different abbrv. due to dataset)
+    all_emotions = ['AF', 'AN', 'DI', 'HA', 'SA', 'SU', 'NE']
+    # find inp emotion index
+    inp_emo_idx = all_emotions.index(inp_emotion)
+
     for sess in ['A', 'B']:
         for p in all_ids:
+            # create file list for all emos
             file_list = [sess + p + em + 'S.txt' for em in all_emotions]
-            if inc_neutral:
-                xy_pair = [file_list[-1], file_list]
+            if inc_emotion:
+                # if inc_emotion is True just include evth as target
+                xy_pair = [file_list[inp_emo_idx], file_list]
             else:
-                xy_pair = [file_list[-1], file_list[0:len(all_emotions)-1]]
+                # if not pop inp_emotion
+                inp_emotion_file = file_list.pop(inp_emo_idx)
+                xy_pair = [inp_emotion_file, file_list]
             if p not in test_identities:
                 train_list.append(xy_pair)
             else:
@@ -245,36 +257,43 @@ def kdef_landmarks_facealigner(path_to_landmarks, inc_neutral=False):
     # np.save('facealigner_test_input.npy', test_input)
     # np.save('facealigner_test_output.npy', test_output)
 
-    # train_output = train_output - np.repeat(np.expand_dims(train_input, axis=1), 6, axis=1)
-    # test_output = test_output - np.repeat(np.expand_dims(test_input, axis=1), 6, axis=1)
+    if relative:
+        m = train_output.shape[1]
+        train_output = train_output - np.repeat(np.expand_dims(train_input, axis=1), m, axis=1)
+        test_output = test_output - np.repeat(np.expand_dims(test_input, axis=1), m, axis=1)
     return torch.from_numpy(train_input).float(), torch.from_numpy(train_output).float(),\
            torch.from_numpy(test_input).float(), torch.from_numpy(test_output).float(), \
            train_list, test_list
 
 
-def rafd_landmarks_facealigner(path_to_landmarks, path_to_csv, inc_neutral=False):
+def rafd_landmarks_facealigner(path_to_landmarks, path_to_csv, inp_emotion='neutral', inc_emotion=False):
     train_list = []
     test_list = []
     all_ids = [str(i).zfill(2) for i in pd.read_csv(path_to_csv)['speaker'].unique().tolist()]
     test_ids = ['25', '58', '72', '41', '35', '71']
-    all_emotions = ['angry', 'contemptuous', 'disgusted', 'fearful', 'happy', 'neutral', 'sad', 'surprised']
+    all_emotions = ['angry', 'contemptuous', 'disgusted', 'fearful', 'happy', 'sad', 'surprised', 'neutral']
+    inp_emo_idx = all_emotions.index(inp_emotion)
     num_emos = len(all_emotions)
     print(num_emos)
     sorted_lnd_list = sorted(os.listdir(path_to_landmarks))
 
     for i in range(len(all_ids)):
         fnames = sorted_lnd_list[i*num_emos: (i+1)*num_emos]
+        # get neutral and put it at the end
+        neu_im = fnames.pop(5)
+        fnames.append(neu_im)
+
         # print(fnames)
         # print(all_ids[i])
         assert set([fn[8:10] for fn in fnames]) == set([all_ids[i]])
         assert set([fn.split('_')[4] for fn in fnames]) == set(all_emotions)
-        neu_im = fnames.pop(5)
-        if inc_neutral:
-            fnames.append(neu_im)
+        inp_im = fnames[inp_emo_idx]
+        if not inc_emotion:
+            fnames.remove(inp_im)
         if fnames[0][8:10] not in test_ids:
-            train_list.append([neu_im, fnames])
+            train_list.append([inp_im, fnames])
         else:
-            test_list.append([neu_im, fnames])
+            test_list.append([inp_im, fnames])
 
     train_input = []
     train_output = []

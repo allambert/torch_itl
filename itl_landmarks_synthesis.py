@@ -11,14 +11,15 @@ from torch_itl import model, sampler, cost, kernel, estimator
 # ----------------------------------
 dataset = 'KDEF'  # KDEF or Rafd
 theta_type = 'aff'  # aff or ''
-inc_neutral = True  # bool to include (0,0) in emotion embedding
+inp_emotion = 'AF'
+inc_emotion = True  # bool to include (0,0) in emotion embedding
 use_facealigner = True  # bool to use aligned faces (for 'Rafd' - set to true)
 
-data_path = './datasets/KDEF_Aligned/KDEF_LANDMARKS'  # set data path
+data_path = os.path.join('./datasets', dataset+'_Aligned', dataset +'_LANDMARKS')  # set data path
 if dataset == 'Rafd':
     # dirty hack only used to get Rafd speaker ids, not continuously ordered
     data_csv_path = '/home/mlpboon/Downloads/Rafd/Rafd.csv'
-affect_net_csv_path = './utils/landmark_utils/validation.csv' # to be set if theta_type == 'aff'
+affect_net_csv_path = ''  # to be set if theta_type == 'aff'
 output_folder = './LS_Experiments/'  # store all experiments in this output folder
 if not os.path.exists(output_folder):
     os.mkdir(output_folder)
@@ -29,11 +30,13 @@ if use_facealigner:
     if dataset == 'KDEF':
         from datasets.datasets import kdef_landmarks_facealigner
         x_train, y_train, x_test, y_test, train_list, test_list = \
-            kdef_landmarks_facealigner(data_path, inc_neutral=inc_neutral)
+            kdef_landmarks_facealigner(data_path, inp_emotion=inp_emotion,
+                                       inc_emotion=inc_emotion)
     elif dataset == 'Rafd':
         from datasets.datasets import rafd_landmarks_facealigner
         x_train, y_train, x_test, y_test, train_list, test_list = \
-            rafd_landmarks_facealigner(data_path, data_csv_path, inc_neutral=inc_neutral)
+            rafd_landmarks_facealigner(data_path, data_csv_path, inp_emotion=inp_emotion,
+                                       inc_emotion=inc_emotion)
 else:
     from datasets.datasets import import_kdef_landmark_synthesis
     input_data_version = 'aligned2'
@@ -106,15 +109,35 @@ lbda = 0.001
 
 # define emotion sampler
 if theta_type == 'aff':
+    if dataset == 'KDEF':
+        aff_emo_match = {'NE': 'Neutral',
+                         'HA': 'Happy',
+                         'SA': 'Sad',
+                         'SU': 'Surprise',
+                         'AF': 'Fear',
+                         'DI': 'Disgust',
+                         'AN': 'Anger',
+                         }
+    elif dataset == 'Rafd':
+        aff_emo_match = {'neutral': 'Neutral',
+                         'happy': 'Happy',
+                         'sad': 'Sad',
+                         'surprised': 'Surprise',
+                         'fearful': 'Fear',
+                         'disgusted': 'Disgust',
+                         'angry': 'Anger',
+                         'contemptous': 'Contempt'
+                         }
     from datasets.datasets import import_affectnet_va_embedding
     aff_emo_dict = import_affectnet_va_embedding(affect_net_csv_path)
-
+    print(aff_emo_dict)
     sampler_ = sampler.CircularSampler(data=dataset+theta_type,
-                                       inc_neutral=inc_neutral,
+                                       inp_emotion=aff_emo_match[inp_emotion],
+                                       inc_emotion=inc_emotion,
                                        sample_dict=aff_emo_dict)
 elif theta_type == '':
     sampler_ = sampler.CircularSampler(data=dataset,
-                                       inc_neutral=inc_neutral)
+                                       inc_emotion=inc_emotion)
 sampler_.m = m
 
 itl_estimator = estimator.ITLEstimator(itl_model,
@@ -139,10 +162,10 @@ for ne in range(NE):
 # ----------------------------------
 # Save model and params
 # -----------------------------------
-
+timestr = time.strftime("%Y%m%d-%H%M%S")
+save_dir = os.path.join(output_folder, dataset + '_' + inp_emotion + '_itl_model_' + timestr)
 if save_model:
-    timestr = time.strftime("%Y%m%d-%H%M%S")
-    MODEL_DIR = os.path.join(output_folder, dataset + '_itl_model_' + timestr, 'model')
+    MODEL_DIR = os.path.join(save_dir, 'model')
     if not os.path.exists(MODEL_DIR):
         os.makedirs(MODEL_DIR)
     PATH =  os.path.join(MODEL_DIR, 'itl_model_ckpt_' + timestr + '.pt')
@@ -155,7 +178,8 @@ if save_model:
                            'input_data_version': input_data_version,
                            'dataset': dataset,
                            'theta_type': theta_type,
-                           'include_neutral': inc_neutral},
+                           'inpu_emotion': inp_emotion,
+                           'include_emotion': inc_emotion},
                   'Kernels': {'kernel_input_learnable': kernel_input_learnable,
                               'output_var_dependence': output_var_dependence,
                               'gamma_inp': gamma_inp,
@@ -175,7 +199,7 @@ pred_test1 = itl_estimator.model.forward(x_test, sampler_.sample(m))
 pred_test2 = itl_estimator.model.forward(x_test, torch.tensor([[0.866, 0.5]], dtype=torch.float))
 
 if use_facealigner and save_pred:
-    PRED_DIR = os.path.join(output_folder, dataset + '_itl_model_' + timestr, 'predictions', dataset)
+    PRED_DIR = os.path.join(save_dir, 'predictions', dataset)
     if not os.path.exists(PRED_DIR):
         os.makedirs(PRED_DIR)
     pred_test1_np = pred_test1.detach().numpy()
@@ -188,7 +212,7 @@ if use_facealigner and save_pred:
 
 if plot_fig:
     plt_x = x_test[0].numpy().reshape(68, 2)
-    plt_xt = pred_test1[0, 3].detach().numpy().reshape(68, 2)
+    plt_xt = pred_test1[0, 4].detach().numpy().reshape(68, 2)
     if use_facealigner:
         plt_x = plt_x * 128
         plt_xt = plt_xt * 128
