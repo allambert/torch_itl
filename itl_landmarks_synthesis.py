@@ -129,7 +129,7 @@ itl_estimator = estimator.ITLEstimator(itl_model,
 
 for ne in range(NE):
     itl_estimator.fit_alpha(x_train, y_train, n_epochs=ne_fa,
-                        lr=lr_alpha, line_search_fn='strong_wolfe', warm_start=True)
+                        lr=lr_alpha, line_search_fn='strong_wolfe', warm_start=False)
 
     print(itl_estimator.losses)
     #itl_estimator.clear_memory()
@@ -138,6 +138,9 @@ for ne in range(NE):
         print(itl_estimator.model.kernel_input.losses)
         itl_estimator.model.kernel_input.clear_memory()
 
+#%%
+itl_estimator.fit_closed_form(x_train, y_train)
+itl_estimator.training_risk()
 #%%
 # ----------------------------------
 # Save model and params
@@ -176,6 +179,7 @@ if save_model:
 # Predict and visualize
 # -----------------------------------
 
+pred_train = itl_estimator.model.forward(x_train, sampler_.sample(m))
 pred_test1 = itl_estimator.model.forward(x_test, sampler_.sample(m))
 pred_test2 = itl_estimator.model.forward(x_test, torch.tensor([[0.866, 0.5]], dtype=torch.float))
 
@@ -211,5 +215,6 @@ print("done")
 plt.figure()
 plt.plot(itl_estimator.losses)
 plt.show()
-print("Empirical Risk:", itl_estimator.cost(y_test, pred_test1, sampler_.sample(m)))
+print("Empirical Risk Train:", itl_estimator.cost(y_train, pred_train, sampler_.sample(m)))
+print("Empirical Risk Test:", itl_estimator.cost(y_test, pred_test1, sampler_.sample(m)))
 print("Estimator Norm:", itl_estimator.model.vv_norm())

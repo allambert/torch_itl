@@ -61,3 +61,11 @@ class CircularSampler(object):
 
         else:
             return torch.from_numpy(np.expand_dims(np.linspace(start=-np.pi/2, stop=np.pi/2, num=m), axis=-1)).float()
+
+class HardCodedSampler(object):
+    def __init__(self, vec, idx):
+        self.vec = vec
+        self.idx = idx
+
+    def sample(self,  m):
+        return(self.vec[self.idx])
