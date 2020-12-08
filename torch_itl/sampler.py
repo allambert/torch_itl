@@ -26,18 +26,23 @@ class LinearSampler(object):
 # TODO: Currently hand coded values are returned, modify class later
 class CircularSampler(object):
     def __init__(self, a=0, b=torch.acos(torch.zeros(1)).item()*4, m=None, data=None, sample_dict=None,
-                 inc_neutral=False):
+                 inp_emotion='Neutral', inc_emotion=False):
         self.a = a
         self.b = b
         self.m = m
         self.data = data
         self.sample_dict = sample_dict
-        self.inc_neutral = inc_neutral
+        self.sample_dict['Neutral'] = [0, 0]
+        self.inp_emotion = inp_emotion
+        self.inc_emotion = inc_emotion
 
         if data == 'KDEFaff':
-            self.emo_list = ['Fear', 'Anger', 'Disgust', 'Happy', 'Sad', 'Surprise']
+            self.emo_list = ['Fear', 'Anger', 'Disgust', 'Happy', 'Sad', 'Surprise', 'Neutral']
         elif data == 'Rafdaff':
-            self.emo_list = ['Anger', 'Contempt', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise']
+            #woCON change 3 of 3
+            #self.emo_list = ['Anger', 'Contempt', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
+            self.emo_list = ['Anger', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
+            #woCON change
 
     def sample(self, m):
         # angles = torch.linspace(a, b, m)
@@ -54,9 +59,13 @@ class CircularSampler(object):
         elif self.data == 'KDEFaff' or self.data == 'Rafdaff':
             emo_emb = []
             for emo in self.emo_list:
-                emo_emb.append(self.sample_dict[emo]/np.linalg.norm(self.sample_dict[emo]))
-            if self.inc_neutral:
-                emo_emb.append([0, 0])
+                if (not self.inc_emotion) and (emo == self.inp_emotion):
+                    continue
+                else:
+                    if emo == 'Neutral':
+                        emo_emb.append(self.sample_dict['Neutral'])
+                    else:
+                        emo_emb.append(self.sample_dict[emo]/np.linalg.norm(self.sample_dict[emo]))
             return torch.tensor(emo_emb, dtype=torch.float)
 
         else:

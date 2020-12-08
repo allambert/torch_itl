@@ -118,6 +118,10 @@ def FormatLndITLImageFolder(test_neu_folder, emo_lnd_folder, out_folder, dataset
                 filename_split = filename.split('_')
                 filename_split[4] = emo
                 fname_emo = prefix_string + '_'.join(filename_split)
+            elif dataset_name == 'RafdwoCON':
+                filename_split = filename.split('_')
+                filename_split[4] = emo
+                fname_emo = prefix_string + '_'.join(filename_split)
             emo_lnd_file = os.path.join(emo_lnd_folder, fname_emo + '.txt')
             lnd = np.loadtxt(emo_lnd_file).reshape(68, 2)
             lnd_img = EM(lnd)
@@ -195,7 +199,7 @@ def FormatSynthForImageFolder(test_neu_folder, test_lnd_folder, emo_lnd_folder,
 
 if __name__ == "__main__":
     task = 'edgemapITL'
-    dataset_name = 'Rafd'
+    dataset_name = 'KDEF'
 
     if task == 'classify':
         if dataset_name == 'KDEF':
@@ -205,8 +209,8 @@ if __name__ == "__main__":
         if dataset_name == 'KDEF':
             neu_img_folder = './KDEF_Classification/test/NE'
             neu_lnd_folder = '../../../datasets/KDEF_Aligned/KDEF_LANDMARKS'
-            emo_lnd_folder = '../../../LS_Experiments/KDEF_itl_model_20201116-165010/predictions/KDEF'
-            out_folder = './SynthPredKDEF_itl_model_20201116-165010'
+            emo_lnd_folder = '../../../LS_Experiments/KDEF_relative_itl_model_20201121-181221/predictions/KDEF'
+            out_folder = './SynthPredKDEF_relative_itl_model_20201121-181221'
             use_gt=False
             FormatSynthForImageFolder(neu_img_folder, neu_lnd_folder, emo_lnd_folder, out_folder, dataset_name, use_gt=use_gt)
     elif task == 'edgemap':
@@ -221,11 +225,16 @@ if __name__ == "__main__":
     elif task == 'edgemapITL':
         if dataset_name == 'KDEF':
             neu_img_folder = './KDEF_LandmarkClassification/test/NE'
-            emo_lnd_folder = '../../../LS_Experiments/KDEF_itl_model_20201116-165010/predictions/KDEF'
-            out_folder = './LndPredKDEF_itl_model_20201116-165010'
+            emo_lnd_folder = '../../../LS_Experiments/KDEF_NE_itl_model_20201208-152032/predictions/KDEF'
+            out_folder = './LndPredKDEF_NE_itl_model_20201208-152032facenet'
             FormatLndITLImageFolder(neu_img_folder, emo_lnd_folder, out_folder, dataset_name)
         elif dataset_name == 'Rafd':
             neu_img_folder = './Rafd_LandmarkClassification/test/neutral'
-            emo_lnd_folder = '../../../LS_Experiments/Rafd_itl_model_20201118-110809/predictions/Rafd'
-            out_folder = './LndPredRafd_itl_model_20201118-110809'
+            emo_lnd_folder = '../../../LS_Experiments/Rafd_itl_model_20201118-134437/predictions/Rafd'
+            out_folder = './LndPredRafd_itl_model_20201118-134437'
+            FormatLndITLImageFolder(neu_img_folder, emo_lnd_folder, out_folder, dataset_name)
+        elif dataset_name == 'RafdwoCON':
+            neu_img_folder = './RafdwoCON_LandmarkClassification/test/neutral'
+            emo_lnd_folder = '../../../LS_Experiments/Rafd_neutral_itl_model_20201203-180453/predictions/Rafd'
+            out_folder = './LndPredRafd_neutral_itl_model_20201203-180453'
             FormatLndITLImageFolder(neu_img_folder, emo_lnd_folder, out_folder, dataset_name)

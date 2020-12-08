@@ -6,18 +6,29 @@ from sklearn.metrics import confusion_matrix
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 MODEL_PATH  = './LndExperiments/KDEF_bs16_e10_20201117-181507'
+# MODEL_PATH  = './LndExperiments/Rafd_bs16_e10_20201118-055249'
+# MODEL_PATH  = './LndExperiments/RafdwoCON_bs16_e10_20201203-133925'
+
 dataset = 'KDEF'
 batch_size = 2
 input_size = 224
 
 if dataset == 'KDEF':
     num_classes = 7
-    data_dir = './LndPredKDEF_itl_model_20201116-165010'
+    data_dir = './LndPredKDEF_NE_itl_model_20201208-152032facenet'
+    # data_dir = './LndPredKDEF_itl_model_20201118-134545'
     # data_dir = './KDEF_LandmarkClassification/train'
     # data_dir = './KDEF_LandmarkClassification/test'
 elif dataset == 'Rafd':
     num_classes = 8
-    data_dir = ''
+    data_dir = './LndPredRafd_itl_model_20201118-134437'
+    # data_dir = './Rafd_LandmarkClassification/train'
+    # data_dir = './Rafd_LandmarkClassification/test'
+elif dataset == 'RafdwoCON':
+    num_classes = 7
+    # data_dir = './LndPredRafd_neutral_itl_model_20201203-180453'
+    # data_dir = './RafdwoCON_LandmarkClassification/train'
+    data_dir = './RafdwoCON_LandmarkClassification/test'
 
 # dataloader and transform
 data_transform = transforms.Compose([
