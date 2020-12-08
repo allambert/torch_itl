@@ -227,7 +227,73 @@ print("done")
 # plt.show()
 # print("Empirical Risk Train:", itl_estimator.cost(y_train_joint, pred_train, sampler_.sample(m)))
 itl_estimator.cost(y_test_joint, pred_test1, sampler_.sample(m)).mean(axis=1)
-print(itl_estimator.training_risk())
+print("Empirical Risk Train:",itl_estimator.training_risk())
 y_test_joint.shape
 print("Empirical Risk Test:", itl_estimator.cost(y_test_joint, pred_test1, sampler_.sample(m)))
 print("Estimator Norm:", itl_estimator.model.vv_norm())
+
+#%%
+# Generating edgemaps
+def circular_sampling(theta1, theta2, num_samples):
+    angle1 = np.arctan2(theta1[1], theta1[0])
+    angle2 = np.arctan2(theta2[1], theta2[0])
+    angle1 = angle1 if angle1>=0 else angle1+(2*np.pi)
+    angle2 = angle2 if angle2>=0 else angle2+(2*np.pi)
+
+    reverse = False
+    if angle1>angle2:
+        start = angle2; end = angle1
+        reverse = True
+    else:
+        start = angle1; end = angle2
+
+    sampled_angles = np.linspace(start=start, stop=end, num=num_samples, endpoint=True)
+    sample_coords = np.vstack((np.cos(sampled_angles), np.sin(sampled_angles))).T
+
+    if reverse:
+        return np.flipud(sample_coords)
+    else:
+        return sample_coords
+
+def radial_sampling(theta, num_samples):
+    angle = np.arctan2(theta[1], theta[0])
+    sampled_radii = np.linspace(start=0, stop=1, num=num_samples, endpoint=True)
+    sample_coords = np.vstack((sampled_radii*np.cos(angle), sampled_radii*np.sin(angle))).T
+    return sample_coords
+
+
+class EdgeMap(object):
+    def __init__(self, out_res, num_parts=3):
+        self.out_res = out_res
+        self.num_parts = num_parts
+        self.groups = [
+            [np.arange(0, 17, 1), 255],
+            [np.arange(17, 22, 1), 255],
+            [np.arange(22, 27, 1), 255],
+            [np.arange(27, 31, 1), 255],
+            [np.arange(31, 36, 1), 255],
+            [list(np.arange(36, 42, 1)) + [36], 255],
+            [list(np.arange(42, 48, 1)) + [42], 255],
+            [list(np.arange(48, 60, 1)) + [48], 255],
+            [list(np.arange(60, 68, 1)) + [60], 255]
+        ]
+
+    def __call__(self, shape):
+        image = np.zeros((self.out_res, self.out_res, self.num_parts), dtype=np.float32)
+        for g in self.groups:
+            for i in range(len(g[0]) - 1):
+                start = int(shape[g[0][i]][0]), int(shape[g[0][i]][1])
+                end = int(shape[g[0][i + 1]][0]), int(shape[g[0][i + 1]][1])
+                cv2.line(image, start, end, g[1], 1)
+        return image
+
+import cv2
+sampling_type = 'radial'
+num_samples = 10
+ckpt = torch.load(model_ckpt_path)
+itl_model.test_mode(x_train=x_train_joint, thetas=sampler_.sample(m), alpha=ckpt['itl_alpha'])
+if sampling_type == 'circular':
+    sampled_emotions = circular_sampling(aff_emo_dict['Happy'], aff_emo_dict['Surprise'], num_samples)
+elif sampling_type == 'radial':
+    sampled_emotions = radial_sampling(aff_emo_dict['Happy'], num_samples)
+EM = EdgeMap(out_res=128, num_parts=1)
