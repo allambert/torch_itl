@@ -11,11 +11,13 @@ from torch_itl import model, sampler, cost, kernel, estimator
 # ----------------------------------
 dataset = 'KDEF'  # KDEF or Rafd
 theta_type = 'aff'  # aff or ''
-inp_emotion = 'AF'
+inp_emotion = 'NE'
 inc_emotion = True  # bool to include (0,0) in emotion embedding
 use_facealigner = True  # bool to use aligned faces (for 'Rafd' - set to true)
 
 data_path = os.path.join('./datasets', dataset+'_Aligned', dataset +'_LANDMARKS')  # set data path
+data_emb_path = os.path.join('./datasets', dataset+'_Aligned', dataset +'_facenet')  # set data path
+
 if dataset == 'Rafd':
     # dirty hack only used to get Rafd speaker ids, not continuously ordered
     data_csv_path = '/home/mlpboon/Downloads/Rafd/Rafd.csv'
@@ -28,9 +30,12 @@ print('Reading data')
 if use_facealigner:
     input_data_version = 'facealigner'
     if dataset == 'KDEF':
-        from datasets.datasets import kdef_landmarks_facealigner
+        from datasets.datasets import kdef_landmarks_facealigner, kdef_landmarks_facenet
+        # x_train, y_train, x_test, y_test, train_list, test_list = \
+        #     kdef_landmarks_facealigner(data_path, inp_emotion=inp_emotion,
+        #                                inc_emotion=inc_emotion)
         x_train, y_train, x_test, y_test, train_list, test_list = \
-            kdef_landmarks_facealigner(data_path, inp_emotion=inp_emotion,
+            kdef_landmarks_facenet(data_path, data_emb_path, inp_emotion=inp_emotion,
                                        inc_emotion=inc_emotion)
     elif dataset == 'Rafd':
         from datasets.datasets import rafd_landmarks_facealigner
@@ -56,6 +61,7 @@ output_var_dependence = False
 save_model = True
 plot_fig = True
 save_pred = True
+get_addon_metrics = True
 
 if kernel_input_learnable:
     NE = 10  # num epochs overall
@@ -65,15 +71,15 @@ if kernel_input_learnable:
     print('defining network')
     # define input network and kernel
     n_h = 64
-    d_out = 20
+    d_out = 32
     model_kernel_input = torch.nn.Sequential(
         torch.nn.Linear(x_train.shape[1], n_h),
         torch.nn.ReLU(),
         torch.nn.Linear(n_h, d_out)
     )
 
-    gamma_inp = 3
-    optim_params = dict(lr=0.01, momentum=0, dampening=0,
+    gamma_inp = 6
+    optim_params = dict(lr=0.001, momentum=0, dampening=0,
                         weight_decay=0, nesterov=False)
 
     kernel_input = kernel.LearnableGaussian(
@@ -81,7 +87,7 @@ if kernel_input_learnable:
 else:
     NE = 1
     ne_fa = 50
-    gamma_inp = 3.0
+    gamma_inp = 0.5
     kernel_input = kernel.Gaussian(gamma_inp)
 
 # define emotion kernel
@@ -147,15 +153,17 @@ itl_estimator = estimator.ITLEstimator(itl_model,
 # ----------------------------------
 # Training
 # ----------------------------------
-
+alpha_loss = []
+kernel_loss = []
 for ne in range(NE):
     itl_estimator.fit_alpha(x_train, y_train, n_epochs=ne_fa,
                         lr=lr_alpha, line_search_fn='strong_wolfe', warm_start=False)
-
+    alpha_loss += itl_estimator.losses
     print(itl_estimator.losses)
     itl_estimator.clear_memory()
     if kernel_input_learnable:
         itl_estimator.fit_kernel_input(x_train, y_train, n_epochs=ne_fki)
+        kernel_loss += itl_estimator.model.kernel_input.losses
         print(itl_estimator.model.kernel_input.losses)
         itl_estimator.model.kernel_input.clear_memory()
 
@@ -196,7 +204,37 @@ if save_model:
 # -----------------------------------
 
 pred_test1 = itl_estimator.model.forward(x_test, sampler_.sample(m))
+
 pred_test2 = itl_estimator.model.forward(x_test, torch.tensor([[0.866, 0.5]], dtype=torch.float))
+
+if get_addon_metrics:
+    print('cost', itl_estimator.cost(y_test, pred_test1, sampler_.sample(m)))
+    # compute expected euclidean distance between samples and mean for each emotion
+    var_gt_em = 0
+    var_test_em = 0
+    var_gt = 0
+    var_test = 0
+    for i in range(m):
+        var_gt_em = np.sum(np.var(y_test[:, i, :].numpy(), axis=0))
+        var_test_em = np.sum(np.var(pred_test1[:, i, :].detach().numpy(), axis=0))
+        var_gt += var_gt_em
+        var_test += var_test_em
+        print('{:d}, {:.3f}, {:.3f}'.format(i, var_gt_em, var_test_em))
+    print('{:.3f}, {:.3f}'.format(var_gt / m, var_test / m))
+    plt.figure(1)
+    plt.plot(alpha_loss)
+    plt.title('Alpha - Loss evolution, NE:{}, N_ALPHA:{}'.format(NE, ne_fa))
+    plt.xlabel('iterations')
+    plt.ylabel('loss')
+    plt.savefig('loss_alpha.png')
+    if kernel_input_learnable:
+        plt.figure(2)
+        plt.plot(kernel_loss)
+        plt.title('Input kernel - Loss evolution, NE:{}, N_KERNEL:{}'.format(NE, ne_fki))
+        plt.xlabel('iterations')
+        plt.ylabel('loss')
+        plt.savefig('loss_kernel.png')
+
 
 if use_facealigner and save_pred:
     PRED_DIR = os.path.join(save_dir, 'predictions', dataset)

@@ -5,9 +5,9 @@ import pandas as pd
 import cv2
 
 #base_folder_path = '/mnt/telecom1/emotional_speech_datasets'
-base_folder_path = '/home/mlpboon/Downloads'
-#base_folder_path = '/home/mlpboon/post-doc/repositories/external/GANnotation'
-
+#base_folder_path = '/home/mlpboon/Downloads'
+base_folder_path = '/home/mlpboon/post-doc/repositories/external/GANnotation'
+#base_folder_path = '/home/mlpboon/post-doc/repositories/torch_itl/datasets'
 
 class EmotionalSpeechDataset(ABC):
     """
@@ -328,7 +328,7 @@ class RafdData(EmotionalSpeechDataset):
         data = []
 
         for pic in sorted(os.listdir(self.data_path)):
-            if pic.split('.')[-1] == self.extension[1:]:
+            if pic.split('.')[-1].lower() == self.extension[1:]:
                 fname_part = pic.split('.')[0].split('_')
                 assert fname_part[0][4:] in self.profile
                 assert (fname_part[2] in self.group or fname_part[2] == self.age[0])

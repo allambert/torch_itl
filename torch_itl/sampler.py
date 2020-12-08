@@ -39,7 +39,10 @@ class CircularSampler(object):
         if data == 'KDEFaff':
             self.emo_list = ['Fear', 'Anger', 'Disgust', 'Happy', 'Sad', 'Surprise', 'Neutral']
         elif data == 'Rafdaff':
-            self.emo_list = ['Anger', 'Contempt', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
+            #woCON change 3 of 3
+            #self.emo_list = ['Anger', 'Contempt', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
+            self.emo_list = ['Anger', 'Disgust', 'Fear', 'Happy', 'Sad', 'Surprise', 'Neutral']
+            #woCON change
 
     def sample(self, m):
         # angles = torch.linspace(a, b, m)
