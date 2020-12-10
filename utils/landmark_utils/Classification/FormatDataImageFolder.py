@@ -128,6 +128,25 @@ def FormatLndITLImageFolder(test_neu_folder, emo_lnd_folder, out_folder, dataset
             cv2.imwrite(os.path.join(emo_out_path, fname_emo + '.JPG'), lnd_img)
 
 
+def FormatITLMultiFolder(test_neu_folder, emo_lnd_folder, out_folder):
+    EM = EdgeMap(out_res=128, num_parts=1)
+    # read emotion names from directory names
+    all_emotions = [f.name for f in os.scandir(os.path.dirname(test_neu_folder)) if f.is_dir()]
+    print(all_emotions)
+    for dirpath, dirnames, filenames in os.walk(emo_lnd_folder):
+        print(dirpath, dirnames)
+        if dirpath.split('/')[-1] in all_emotions:
+            emo_out_path = os.path.join(out_folder, dirpath.split('/')[-1])
+            if not os.path.exists(emo_out_path):
+                os.makedirs(emo_out_path)
+            for f in filenames:
+                if f.endswith('.txt'):
+                    emo_lnd_file = os.path.join(dirpath, f)
+                    lnd = np.loadtxt(emo_lnd_file).reshape(68, 2)
+                    lnd_img = EM(lnd)
+                    cv2.imwrite(os.path.join(emo_out_path, f.split('.')[0] + '.JPG'), lnd_img)
+
+
 def FormatForImageFolder(data_csv_name, dataset_name, test_split):
     # set directory structure
     output_path = os.path.join(base_output_path, dataset_name + '_Classification')
@@ -198,7 +217,7 @@ def FormatSynthForImageFolder(test_neu_folder, test_lnd_folder, emo_lnd_folder,
 
 
 if __name__ == "__main__":
-    task = 'edgemapITL'
+    task = 'edgemapITLJoint'
     dataset_name = 'KDEF'
 
     if task == 'classify':
@@ -238,3 +257,9 @@ if __name__ == "__main__":
             emo_lnd_folder = '../../../LS_Experiments/Rafd_neutral_itl_model_20201203-180453/predictions/Rafd'
             out_folder = './LndPredRafd_neutral_itl_model_20201203-180453'
             FormatLndITLImageFolder(neu_img_folder, emo_lnd_folder, out_folder, dataset_name)
+    elif task == 'edgemapITLJoint':
+        if dataset_name == 'KDEF':
+            neu_img_folder = '../../../LS_Experiments/KDEF_itl_model_20201208-230314/predictions/KDEF/0'
+            emo_lnd_folder = '../../../LS_Experiments/KDEF_itl_model_20201208-230314/predictions/KDEF'
+            out_folder = './LndPredJoint'
+            FormatITLMultiFolder(neu_img_folder, emo_lnd_folder, out_folder)
