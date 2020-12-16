@@ -24,17 +24,28 @@ if __name__ == "__main__":
 
     dataset = 'KDEF'
     dir_path = '../../../datasets/'
+    use_csv = False
 
-    # input data list
-    df = pd.read_csv(dir_path + dataset + '_Aligned/' + dataset + '/' + dataset +'.csv')
-    img_list = df['file_path'].tolist()
+    inp_folder = dir_path + dataset + '_Aligned/' + dataset
+    out_folder = dir_path + dataset + '_Aligned/' + dataset + '_facenet'
+
+    if use_csv:
+        # input data list
+        df = pd.read_csv(inp_folder + '/' + dataset + '.csv')
+        img_list = df['file_path'].tolist()
+    else:
+        img_list = []
+        for dir, subdir, filenames in os.walk(inp_folder):
+            for f in filenames:
+                if f.endswith('.JPG'):
+                    img_list.append(os.path.join(dir, f))
     print('files_to process', len(img_list))
 
     # img_list = ['../../../datasets/KDEF_Aligned/KDEF/AF01/AF01NES.JPG',
     #             '../../../datasets/KDEF_Aligned/KDEF/AF01/AF01ANS.JPG',
     #             '../../../datasets/KDEF_Aligned/KDEF/AF02/AF02NES.JPG']
 
-    out_folder = dir_path + dataset + '_Aligned/' + dataset + '_facenet'
+    # create output folder
     if not os.path.exists(out_folder):
         os.mkdir(out_folder)
 
