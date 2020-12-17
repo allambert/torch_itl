@@ -290,10 +290,92 @@ class EdgeMap(object):
 import cv2
 sampling_type = 'radial'
 num_samples = 10
-ckpt = torch.load(model_ckpt_path)
-itl_model.test_mode(x_train=x_train_joint, thetas=sampler_.sample(m), alpha=ckpt['itl_alpha'])
 if sampling_type == 'circular':
     sampled_emotions = circular_sampling(aff_emo_dict['Happy'], aff_emo_dict['Surprise'], num_samples)
 elif sampling_type == 'radial':
     sampled_emotions = radial_sampling(aff_emo_dict['Happy'], num_samples)
 EM = EdgeMap(out_res=128, num_parts=1)
+#%%
+
+#%matplotlib inline
+for i in range(len(sampled_emotions)):
+    pred_test = itl_model.forward(x_test_joint, torch.from_numpy(sampled_emotions[i][np.newaxis]).float())
+    im_em = EM(pred_test[0, 0].detach().numpy().reshape(68,2)*128)
+    plt.imshow(np.squeeze(im_em))
+    plt.pause(0.5)
+
+#%%
+
+#%matplotlib inline
+import torchvision.transforms as transforms
+from torchvision.utils import make_grid, save_image
+def show(img):
+    npimg = img.numpy()
+    plt.imshow(np.transpose(npimg, (1,2,0)), interpolation='nearest')
+imlist = []
+pred_test1.size()
+for i in range(98):
+    for j in range(7):
+        im_em = EM(pred_test1[i, j].detach().numpy().reshape(68,2)*128)
+        imlist.append(transforms.ToTensor()(im_em.copy()))
+    #imlist.append(transforms.ToTensor()(im_em.copy()))
+#show(make_grid(imlist, nrow=10, padding=10, pad_value=1))
+#save_image(imlist, 'radial_happy_to_surprise.jpg', nrow=10, padding=10, pad_value=1)
+
+#%%
+
+from torchvision import models
+import torch.nn as nn
+import torch.nn.functional as F
+
+device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+if dataset == 'KDEF':
+    num_classes = 7
+    MODEL_PATH = './utils/KDEF_bs16_e10_20201117-181507'
+elif dataset == 'Rafd':
+    num_classes = 8
+    MODEL_PATH = './utils/landmark_utils/Classification/LndExperiments/Rafd_bs16_e10_20201118-055249'
+
+# model def
+def model(model_name, num_classes):
+    if model_name == 'resnet-18':
+        model_ft = models.resnet18(pretrained=False)
+        model_ft.conv1 = nn.Conv2d(1, 64, kernel_size=7, stride=2, padding=3,
+                                   bias=False)
+        num_ftrs = model_ft.fc.in_features
+        model_ft.fc = nn.Linear(num_ftrs, num_classes)
+    return model_ft
+
+
+# Get ResNet and load wts
+emo_model_ft = model('resnet-18', num_classes)
+emo_model_ft.load_state_dict(torch.load(MODEL_PATH, map_location=lambda storage, loc: storage))
+emo_model_ft = emo_model_ft.to(device)
+emo_model_ft.eval()
+
+inputs = F.interpolate(torch.stack(imlist), size=224, mode='bilinear')
+outputs = emo_model_ft(inputs/255.)
+sout = nn.functional.softmax(outputs, dim=1)
+sout_np = sout.detach().numpy()
+
+#%%
+tmp = np.argmax(sout_np, axis=1)
+tmp = tmp.reshape(-1,7)
+cmp = np.zeros_like(tmp)
+for i in range(4):
+    cmp[:,i] = i
+cmp[:,4]  = 5
+cmp[:,5]  = 6
+cmp[:,6]  = 4
+
+res = (cmp == tmp)
+print('Average accuracy over test set:',res.mean())
+#%%
+tmp
+emo_idx = np.array([0,1,2,3,6,4,5])
+confusion_matrix = np.zeros((7,7))
+for i in range(7):
+    for j in range(7):
+        confusion_matrix[i,j] = np.where(tmp[:,i] == j, np.ones(98), np.zeros(98)).sum()
+
+confusion_matrix
