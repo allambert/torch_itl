@@ -36,7 +36,7 @@ emo_lnd_path = sys.argv[3]
 out_im_path = sys.argv[4]
 
 # Set model
-myGAN = GANnotation.GANnotation(path_to_model='myGEN.pth', enable_cuda=False)
+myGAN = GANnotation.GANnotation(path_to_model='/home/mlpboon/post-doc/repositories/torch_itl/utils/landmark_utils/GANnotation/myGEN.pth', enable_cuda=False)
 
 # Read neutral points
 neu_points = np.loadtxt(neu_lnd_path).reshape(68,2,-1)

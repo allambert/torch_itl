@@ -120,6 +120,11 @@ class SpeechSynthesisKernelModel(Model):
         self.G_t = self.kernel_output.compute_gram(self.thetas)
         self.G_xt = self.kronecker_product(self.G_x, self.G_t)
 
+    def precompute_gram(self):
+        self.G_x = self.kernel_input.compute_gram(self.x_train)
+        self.G_t = self.kernel_output.compute_gram(self.thetas)
+        self.G_xt = self.kronecker_product(self.G_x, self.G_t)
+
     def feed(self, x_train, thetas):
         "Set some x_train and thetas to the model, without optimizing"
         self.n = x_train.shape[0]

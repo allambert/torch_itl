@@ -312,11 +312,14 @@ class ITLEstimatorJoint(object):
         for i in range(m*n):
             y_train[i] = data[i//m]
 
+<<<<<<< HEAD
         # n = self.model.mask.sum().item()
         # _, m, nf = data.shape
         # x_train = data.reshape(-1, nf)[self.model.mask]
         # y_train = torch.zeros(n, m, nf)
 
+=======
+>>>>>>> sanjeel_testbranch
         self.model.n = n*m
         self.model.m = m
         self.sampler.m = m
