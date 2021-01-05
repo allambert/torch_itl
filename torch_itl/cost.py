@@ -52,11 +52,13 @@ def speech_synth_loss(y_true, y_pred, thetas):
     n, m, _ = residual.shape
     return torch.sum(residual**2) / n / m / 2
 
-def squared_norm_emotions(y_true, y_pred, thetas, mask=None):
+def squared_norm_w_mask(y_true, y_pred, thetas, mask=None):
     residual = y_true - y_pred
     n, m, _ = residual.shape
-    tmp = (residual**2).reshape(n//m,m,m,-1)
-    return tmp.mean(0).sum(2) / 2
+    if mask is None:
+        raise ValueError('No Mask Given')
+    tmp = (residual[mask]**2)
+    return tmp.sum() / n / m / 2
 
 class Cost(object):
 
