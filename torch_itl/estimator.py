@@ -424,11 +424,22 @@ class ITLEstimatorJointPartial(object):
         return(obj)
 
     def training_risk(self):
-        if not hasattr(self, output_mask):
+        if not hasattr(self, 'output_mask'):
             raise ValueError('No data given')
 
         pred = self.model.forward(self.model.x_train, self.model.thetas)
         return self.cost(self.model.y_train, pred, self.model.thetas, self.output_mask)
+
+    def risk(self, data, mask_test):
+        n, m, nf = data.shape
+        x = data.reshape(n*m, nf)
+        y = torch.zeros(n*m, m, nf)
+        for i in range(n*m):
+            y[i] = data[i//m]
+
+        pred = self.model.forward(x, self.model.thetas)
+        return self.cost(y, pred, self.model.thetas, mask_test)
+
 
     def fast_objective(self):
         if not hasattr(self.model, 'G_x'):
@@ -543,7 +554,7 @@ class ITLEstimatorJointPartial(object):
             for j in range(m):
                 if self.mask[i,j].item():
                     y_train[count] = data[i]
-                    output_mask[count] = mask[i]
+                    output_mask[count] = self.mask[i]
                     count +=1
 
         self.model.n = n
@@ -555,9 +566,7 @@ class ITLEstimatorJointPartial(object):
         self.model.y_train = y_train
         self.output_mask = output_mask
 
-        if not hasattr(self.model, 'G_x'):
-            self.model.precompute_gram()
-
+        self.model.precompute_gram()
 
         tmp = self.model.G_xt + self.lbda_reg *n * torch.eye(n*m)
         mask_ravel = output_mask.reshape(-1)
@@ -569,7 +578,7 @@ class ITLEstimatorJointPartial(object):
 
         self.model.alpha = alpha
 
-        print('alpha fitted, empirical risk=', self.training_risk())
+        #print('alpha fitted, empirical risk=', self.training_risk())
 
     def fit_kernel_input(self, x_train, y_train, n_epochs=150, solver='sgd', minibatch=False):
 

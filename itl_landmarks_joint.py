@@ -177,7 +177,7 @@ if save_model:
 
     with open(PARAM_PATH, 'w') as param_file:
         json.dump(PARAM_DICT, param_file)
-
+x_train.shape
 #%%
 # ----------------------------------
 # Predict and visualize
@@ -227,7 +227,6 @@ print("done")
 # plt.show()
 # print("Empirical Risk Train:", itl_estimator.cost(y_train_joint, pred_train, sampler_.sample(m)))
 itl_estimator.cost(y_test_joint, pred_test1, sampler_.sample(m)).mean(axis=1)
-<<<<<<< HEAD
 print("Empirical Risk Train:",itl_estimator.training_risk())
 y_test_joint.shape
 print("Empirical Risk Test:", itl_estimator.cost(y_test_joint, pred_test1, sampler_.sample(m)))
@@ -380,9 +379,3 @@ for i in range(7):
         confusion_matrix[i,j] = np.where(tmp[:,i] == j, np.ones(98), np.zeros(98)).sum()
 
 confusion_matrix
-=======
-print(itl_estimator.training_risk())
-y_test_joint.shape
-print("Empirical Risk Test:", itl_estimator.cost(y_test_joint, pred_test1, sampler_.sample(m)))
-print("Estimator Norm:", itl_estimator.model.vv_norm())
->>>>>>> sanjeel_testbranch
