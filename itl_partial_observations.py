@@ -179,10 +179,16 @@ min_risk = test_losses[:,0].mean()
 log_test_losses = torch.log(test_losses/min_risk)
 #%%
 plt.figure()
+plt.xlabel("% of unseen data")
+plt.ylabel("log ratio of test risk")
 for j in range(n_loops):
-    plt.plot(idx_loss, log_test_losses[j], c='b', alpha=0.1)
-plt.plot(idx_loss, log_test_losses.mean(0), c='k')
-#plt.savefig('partial_observation')
+    if j==0:
+        plt.plot(idx_loss, log_test_losses[j], c='b', alpha=0.1, label='single loops')
+    else:
+        plt.plot(idx_loss, log_test_losses[j], c='b', alpha=0.1)
+plt.plot(idx_loss, log_test_losses.mean(0), c='k', label='averaged')
+plt.legend(loc='upper left')
+plt.savefig('partial_observation')
 plt.show()
 #%%
 
