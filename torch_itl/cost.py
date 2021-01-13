@@ -56,7 +56,7 @@ def squared_norm_w_mask(y_true, y_pred, thetas, mask=None):
     residual = y_true - y_pred
     n, m, _ = residual.shape
     if mask is None:
-        raise ValueError('No Mask Given')
+        mask = torch.ones(n, m, dtype=torch.bool)
     tmp = (residual[mask]**2)
     return tmp.sum() / n / m / 2
 

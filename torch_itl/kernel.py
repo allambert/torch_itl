@@ -109,3 +109,26 @@ class LearnableGaussianRFF(Kernel):
 
     def clear_memory(self):
         self.losses, self.times = [], [0]
+
+class Linear(Kernel):
+
+    def __init__(self):
+        pass
+
+    def compute_gram(self, X, Y= None):
+        if Y is None:
+            Y = X
+        return X @ Y.T
+
+class LearnableLinear(Kernel):
+
+    def __init__(self, model):
+        self.model = model
+
+    def compute_gram(self, X, Y):
+        if Y is None:
+            Y= X
+        return self.model.forward(X) @ self.model.forward(Y).T
+
+    def clear_memory(self):
+        self.losses, self.times = [], [0]

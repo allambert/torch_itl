@@ -102,7 +102,9 @@ else:
 
 # learning rate of alpha
 lr_alpha = 0.01
-
+#%%
+# y_train = 2*y_train -1
+# y_test = 2*y_test -1
 #%%
 # ----------------------------------
 # Define model
@@ -146,7 +148,7 @@ elif theta_type == '':
     sampler_ = sampler.CircularSampler(data=dataset,
                                        inc_emotion=inc_emotion)
 sampler_.m = m
-mask = torch.zeros(n,m,dtype=torch.bool)
+mask = torch.ones(n,m,dtype=torch.bool)
 #%%
 itl_estimator = estimator.ITLEstimatorJointPartial(itl_model, cost_function, lbda, 0, sampler_, mask)
 
@@ -184,20 +186,17 @@ plt.plot(idx_loss, log_test_losses.mean(0), c='k')
 plt.show()
 #%%
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+# itl_estimator.fit_closed_form(y_train)
+#
+# itl_estimator.model.G_x[1::7][:,1::7]
+#
+# itl_estimator.risk(y_train)
+# itl_estimator.risk(y_test)
+# itl_estimator.lbda_reg = 0.0000001
+# itl_estimator.mask = mask
+# itl_estimator.model.alpha[::7]
+# itl_estimator.model.kernel_input.gamma = 0.1
+#%%
 
 
 
