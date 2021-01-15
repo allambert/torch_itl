@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt
 import random
 random.seed(21)
 import shutil
+import argparse
 
 # structure for ImageFolder pytorch dataset
 # DatasetName_Classification/train/class/file.png or
@@ -14,6 +15,9 @@ import shutil
 
 base_data_path = ''
 base_output_path = ''
+
+KDEF_LABELS = ['AF', 'AN', 'DI', 'HA', 'NE', 'SA', 'SU']
+Rafd_LABELS = ['fearful', 'angry', 'disgusted', 'happy', 'neutral', 'sad', 'surprised']
 
 
 class EdgeMap(object):
@@ -110,6 +114,7 @@ def FormatLndITLImageFolder(test_neu_folder, emo_lnd_folder, out_folder, dataset
         for emo in all_emotions:
             # make output dir if does not exist
             emo_out_path = os.path.join(out_folder, emo)
+
             if not os.path.exists(emo_out_path):
                 os.makedirs(emo_out_path)
             if dataset_name == 'KDEF':
@@ -128,23 +133,113 @@ def FormatLndITLImageFolder(test_neu_folder, emo_lnd_folder, out_folder, dataset
             cv2.imwrite(os.path.join(emo_out_path, fname_emo + '.JPG'), lnd_img)
 
 
-def FormatITLMultiFolder(test_neu_folder, emo_lnd_folder, out_folder):
+def FormatLndITLKfold(test_neu_folder, emo_lnd_folder, out_folder, dataset_name, dirname_protocol):
+    EM = EdgeMap(out_res=128, num_parts=1)
+    prefix_string = 'pred_'
+    # read emotion names from directory names
+    all_emotions = [f.name for f in os.scandir(os.path.dirname(test_neu_folder)) if f.is_dir()]
+    print(prefix_string, all_emotions)
+    kdef_to_rafd = {key: Rafd_LABELS[i] for i, key in enumerate(KDEF_LABELS)}
+    rafd_to_kdef = {key: KDEF_LABELS[i] for i, key in enumerate(Rafd_LABELS)}
+
+    # for each
+    for fname in os.listdir(emo_lnd_folder):
+        filename = fname.split(prefix_string)[-1]
+       # get emo
+        if dataset_name == 'KDEF':
+            emo = filename[4:6]
+        elif dataset_name == 'Rafd':
+            filename_split = filename.split('_')
+            emo = filename_split[4]
+        elif dataset_name == 'RafdwoCON':
+            filename_split = filename.split('_')
+            emo = filename_split[4]
+
+        # make output dir if does not exist
+        if dirname_protocol == dataset_name:
+            emo_out_path = os.path.join(out_folder, emo)
+        elif dataset_name == 'KDEF' and dirname_protocol == 'Rafd':
+            emo_out_path = os.path.join(out_folder, kdef_to_rafd[emo])
+        elif dataset_name == 'Rafd' and dirname_protocol == 'KDEF':
+            emo_out_path = os.path.join(out_folder, rafd_to_kdef[emo])
+        if not os.path.exists(emo_out_path):
+            os.makedirs(emo_out_path)
+
+        emo_lnd_file = os.path.join(emo_lnd_folder, fname)
+        lnd = np.loadtxt(emo_lnd_file).reshape(68, 2)
+        lnd_img = EM(lnd)
+        cv2.imwrite(os.path.join(emo_out_path, fname.split('.')[0] + '.JPG'), lnd_img)
+
+
+def FormatITLMultiFolder(test_neu_folder, emo_lnd_folder, out_folder, dataset_name, dirname_protocol):
     EM = EdgeMap(out_res=128, num_parts=1)
     # read emotion names from directory names
     all_emotions = [f.name for f in os.scandir(os.path.dirname(test_neu_folder)) if f.is_dir()]
     print(all_emotions)
+    kdef_to_rafd = {key: Rafd_LABELS[i] for i, key in enumerate(KDEF_LABELS)}
+    rafd_to_kdef = {key: KDEF_LABELS[i] for i, key in enumerate(Rafd_LABELS)}
+
     for dirpath, dirnames, filenames in os.walk(emo_lnd_folder):
         print(dirpath, dirnames)
         if dirpath.split('/')[-1] in all_emotions:
-            emo_out_path = os.path.join(out_folder, dirpath.split('/')[-1])
+            # emo_out_path = os.path.join(out_folder, dirpath.split('/')[-1])
+            # if not os.path.exists(emo_out_path):
+            #     os.makedirs(emo_out_path)
+            if dirname_protocol == dataset_name:
+                emo_out_path = os.path.join(out_folder, dirpath.split('/')[-1])
+            elif dataset_name == 'KDEF' and dirname_protocol == 'Rafd':
+                emo_out_path = os.path.join(out_folder, kdef_to_rafd[dirpath.split('/')[-1]])
+            elif dataset_name == 'Rafd' and dirname_protocol == 'KDEF':
+                emo_out_path = os.path.join(out_folder, rafd_to_kdef[dirpath.split('/')[-1]])
             if not os.path.exists(emo_out_path):
                 os.makedirs(emo_out_path)
+
             for f in filenames:
                 if f.endswith('.txt'):
                     emo_lnd_file = os.path.join(dirpath, f)
                     lnd = np.loadtxt(emo_lnd_file).reshape(68, 2)
                     lnd_img = EM(lnd)
                     cv2.imwrite(os.path.join(emo_out_path, f.split('.')[0] + '.JPG'), lnd_img)
+
+
+def FormatAffectnetEM(csv_path, out_folder='Aff_LandmarkClassification', num_samples_per_class=50):
+    # get facealigner and EM
+    #from utils.landmark_utils.facealigner import FaceAligner
+    from ..facealigner import FaceAligner
+    fa = FaceAligner(desiredFaceWidth=128)
+    EM = EdgeMap(out_res=128, num_parts=1)
+
+    # read csv
+    df = pd.read_csv(csv_path, header=None)
+
+    emo_dict = {0: 'Neutral',
+                1: 'Happy',
+                2: 'Sad',
+                3: 'Surprise',
+                4: 'Fear',
+                5: 'Disgust',
+                6: 'Anger'}
+
+    # create output dir
+    if not os.path.exists(out_folder):
+        os.makedirs(out_folder)
+    for key in emo_dict.keys():
+        filter_df = df.loc[df[6] == key]
+        emo_folder = os.path.join(out_folder, emo_dict[key])
+        if not os.path.exists(emo_folder):
+            os.mkdir(emo_folder)
+        for i in range(num_samples_per_class):
+            face_x = filter_df.iloc[i][1]
+            face_y = filter_df.iloc[i][2]
+            face_lnd = np.array([float(i) for i in filter_df.iloc[i][5].split(';')]).reshape((68,2))
+            # set to origin
+            face_lnd[:, 0] = face_lnd[:, 0] - face_x
+            face_lnd[:, 1] = face_lnd[:, 1] - face_y
+            # align and resize landmarks
+            trans_face_lnd = fa.align(None, face_lnd)
+            lnd_img = EM(trans_face_lnd)
+            cv2.imwrite(os.path.join(emo_folder, str(i) + '.JPG'), lnd_img)
+
 
 
 def FormatForImageFolder(data_csv_name, dataset_name, test_split):
@@ -217,8 +312,18 @@ def FormatSynthForImageFolder(test_neu_folder, test_lnd_folder, emo_lnd_folder,
 
 
 if __name__ == "__main__":
-    task = 'edgemapITLJoint'
-    dataset_name = 'KDEF'
+    config = argparse.ArgumentParser()
+    config.add_argument("--task", type=str, help="task_name")
+    config.add_argument("--dataset_name", type=str, help="name of the dataset KDEF or Rafd")
+    config.add_argument("--neu_img_folder", type=str, help="name of the neu_img_folder")
+    config.add_argument("--emo_lnd_folder", type=str, help="name of the emo_lnd_folder")
+    config.add_argument("--out_folder", type=str, help="name of the out_folder")
+    config.add_argument("--dirname_protocol", type=str, help="label as rafd or kdef")
+
+    args = config.parse_args()
+
+    task = args.task #'edgemap'
+    dataset_name = args.dataset_name #'Affectnet'
 
     if task == 'classify':
         if dataset_name == 'KDEF':
@@ -241,11 +346,15 @@ if __name__ == "__main__":
             lnd_folder = '../../../datasets/Rafd_Aligned/Rafd_LANDMARKS'
             data_csv_path = '../../../datasets/Rafd_Aligned/Rafd/Rafd.csv'
             FormatLndImageFolder(data_csv_path, lnd_folder, dataset_name, 0.1)
+        elif dataset_name == 'Affectnet':
+            csv_path = '/media/mlpboon/X/AffectNetDatabase/training.csv'
+            FormatAffectnetEM(csv_path, num_samples_per_class=2000)
+
     elif task == 'edgemapITL':
         if dataset_name == 'KDEF':
             neu_img_folder = './KDEF_LandmarkClassification/test/NE'
-            emo_lnd_folder = '../../../LS_Experiments/KDEF_NE_itl_model_20201208-152032/predictions/KDEF'
-            out_folder = './LndPredKDEF_NE_itl_model_20201208-152032facenet'
+            emo_lnd_folder = '../../../LS_Experiments/KDEF_SU_itl_model_20201211-122024_CF/predictions/KDEF'
+            out_folder = './EM_Classification_Exp/LndPredKDEF_SU_itl_model_20201211-122024_CF'
             FormatLndITLImageFolder(neu_img_folder, emo_lnd_folder, out_folder, dataset_name)
         elif dataset_name == 'Rafd':
             neu_img_folder = './Rafd_LandmarkClassification/test/neutral'
@@ -257,9 +366,15 @@ if __name__ == "__main__":
             emo_lnd_folder = '../../../LS_Experiments/Rafd_neutral_itl_model_20201203-180453/predictions/Rafd'
             out_folder = './LndPredRafd_neutral_itl_model_20201203-180453'
             FormatLndITLImageFolder(neu_img_folder, emo_lnd_folder, out_folder, dataset_name)
+    elif task == 'edgemapITLkfold':
+        neu_img_folder = args.neu_img_folder
+        emo_lnd_folder = args.emo_lnd_folder
+        out_folder = args.out_folder
+        dirname_protocol = args.dirname_protocol
+        FormatLndITLKfold(neu_img_folder, emo_lnd_folder, out_folder, dataset_name, dirname_protocol)
     elif task == 'edgemapITLJoint':
-        if dataset_name == 'KDEF':
-            neu_img_folder = '../../../LS_Experiments/KDEF_itl_model_20201208-230314/predictions/KDEF/0'
-            emo_lnd_folder = '../../../LS_Experiments/KDEF_itl_model_20201208-230314/predictions/KDEF'
-            out_folder = './LndPredJoint'
-            FormatITLMultiFolder(neu_img_folder, emo_lnd_folder, out_folder)
+        neu_img_folder = args.neu_img_folder #'../../../LS_Experiments/KDEF_itl_model_20201210-171111/predictions/KDEF/NE'
+        emo_lnd_folder = args.emo_lnd_folder #'../../../LS_Experiments/KDEF_itl_model_20201210-171111/predictions/KDEF'
+        out_folder = args.out_folder  #'./LndPredJoint'
+        dirname_protocol = args.dirname_protocol
+        FormatITLMultiFolder(neu_img_folder, emo_lnd_folder, out_folder, dataset_name, dirname_protocol)
