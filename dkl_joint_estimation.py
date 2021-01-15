@@ -51,12 +51,14 @@ n = x_train.shape[0]
 m = y_train.shape[1]
 nf = y_train.shape[2]
 print('data dimensions', n, m, nf)
-
+#%%
+y_train = 2*y_train - 1
+y_test = 2*y_test - 1
 # ----------------------------------
 # Set kernel and other params
 # ----------------------------------
 
-kernel_input_learnable = False
+kernel_input_learnable = True
 output_var_dependence = False
 save_model = True
 plot_fig = True
@@ -73,13 +75,13 @@ if kernel_input_learnable:
     n_h = 64
     d_out = 32
     model_kernel_input = torch.nn.Sequential(
-        torch.nn.Linear(x_train.shape[1], n_h),
+        torch.nn.Linear(nf, n_h),
         torch.nn.ReLU(),
         torch.nn.Linear(n_h, d_out)
     )
 
-    gamma_inp = 3
-    optim_params = dict(lr=0.001, momentum=0, dampening=0,
+    gamma_inp = 6
+    optim_params = dict(lr=0.0001, momentum=0, dampening=0,
                         weight_decay=0, nesterov=False)
 
     kernel_input = kernel.LearnableGaussian(
@@ -87,7 +89,7 @@ if kernel_input_learnable:
 else:
     NE = 1
     ne_fa = 50
-    gamma_inp = 3
+    gamma_inp = 0.5
     kernel_input = kernel.Gaussian(gamma_inp)
 
 # define emotion kernel
@@ -100,11 +102,6 @@ if output_var_dependence:
 else:
     kernel_freq = np.eye(nf)
 
-# learning rate of alpha
-lr_alpha = 0.01
-#%%
-# y_train = 2*y_train -1
-# y_test = 2*y_test -1
 #%%
 # ----------------------------------
 # Define model
@@ -148,61 +145,36 @@ elif theta_type == '':
     sampler_ = sampler.CircularSampler(data=dataset,
                                        inc_emotion=inc_emotion)
 sampler_.m = m
-mask = torch.ones(n,m,dtype=torch.bool)
+mask = torch.zeros(n,m,dtype=torch.bool)
 #%%
 itl_estimator = estimator.ITLEstimatorJointPartial(itl_model, cost_function, lbda, 0, sampler_, mask)
 
+#%%
+itl_estimator.fit_closed_form(y_train)
 #%%
 # ----------------------------------
 # Training
 # ----------------------------------
 # Creation of the masks
-n_loops = 10
-mask_list = [torch.randperm(n*m).reshape(n, m) for j in range(n_loops)]
-# Creation of test mask
-n_test = y_test.shape[0]
-mask_test = torch.ones(n_test*m, m, dtype=torch.bool)
-#results tensor
-test_losses = torch.zeros(n_loops, n)
+n_epochs = 50
 
-for j in range(n_loops):
-    mask_level = mask_list[j]
-    for i in torch.arange(n*m)[::7]:
-        itl_estimator.mask = (mask_level >= i)
-        itl_estimator.fit_closed_form(y_train)
-        test_losses[j,i//7] = itl_estimator.risk(y_test, mask_test)
-    print('done with loop ',j)
-
+itl_estimator.fit_kernel_input(y_train, batch_size= 1,n_epochs=n_epochs, data_test=y_test)
 #%%
-idx_loss = torch.arange(n*m)[::7].float() / n / m
-min_risk = test_losses[:,0].mean()
-log_test_losses = torch.log(test_losses/min_risk)
-#%%
-plt.figure()
-plt.xlabel("% of unseen data")
-plt.ylabel("log ratio of test risk")
-for j in range(n_loops):
-    if j==0:
-        plt.plot(idx_loss, log_test_losses[j], c='b', alpha=0.1, label='single loops')
-    else:
-        plt.plot(idx_loss, log_test_losses[j], c='b', alpha=0.1)
-plt.plot(idx_loss, log_test_losses.mean(0), c='k', label='averaged')
-plt.legend(loc='upper left')
-plt.savefig('partial_observation')
-plt.show()
-#%%
-
-itl_estimator.fit_closed_form(y_train)
-#
-# itl_estimator.model.G_x[1::7][:,1::7]
-#
- itl_estimator.risk(y_train)
+itl_estimator.model.kernel_input.losses
+itl_estimator.test_risk
+itl_estimator.model.kernel_input.optim_params['lr'] = 0.03
+itl_estimator.lbda_reg
 itl_estimator.risk(y_test)
-# itl_estimator.lbda_reg = 0.0000001
-# itl_estimator.mask = mask
-# itl_estimator.model.alpha[::7]
- itl_estimator.model.kernel_input.gamma
-#%%
+
+itl_estimator.model.kernel_input.compute_gram(y_train.reshape(-1, nf))[0]
+
+itl_estimator.model.kernel_input.compute_gram(y_train.reshape(-1, nf))
+itl_estimator.fit_closed_form(y_train)
+
+itl_estimator
+
+
+
 
 
 
