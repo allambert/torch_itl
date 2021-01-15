@@ -322,7 +322,7 @@ class ITLEstimatorJoint(object):
         if not hasattr(self.model, 'G_x'):
             self.model.precompute_gram()
 
-        tmp = self.model.G_xt + self.lbda_reg *n*m * torch.eye(n*m*m)
+        tmp = self.model.G_xt + self.lbda_reg *n*m*m * torch.eye(n*m*m)
         tmp = torch.inverse(tmp)
 
         # tmp = inverse_reg_block(self.model.G_x, self.model.G_t, self.model.kernel_freq, self.lbda_reg *n*self.model.m)

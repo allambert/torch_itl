@@ -99,7 +99,8 @@ class SpeechSynthesisKernelModel(Model):
             thetas, self.thetas)
         G_xt = self.kronecker_product(G_x, G_t)
         alpha_reshape = torch.reshape(self.alpha, (self.n * self.m, self.num_freq)).T
-        return 1 / self.n * (self.kernel_freq @ alpha_reshape @ G_xt.T).T.reshape((-1, m1, self.num_freq))
+        # return 1 / self.n * (self.kernel_freq @ alpha_reshape @ G_xt.T).T.reshape((-1, m1, self.num_freq))
+        return (self.kernel_freq @ alpha_reshape @ G_xt.T).T.reshape((-1, m1, self.num_freq))
 
     def vv_norm(self):
         """
