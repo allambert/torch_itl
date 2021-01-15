@@ -114,7 +114,7 @@ itl_model = model.JointLandmarksSynthesisKernelModel(kernel_input, kernel_output
 
 # define cost function
 cost_function = cost.squared_norm_w_mask
-lbda = 0.001
+lbda = 0.001/7
 
 # define emotion sampler
 if theta_type == 'aff':
@@ -191,12 +191,11 @@ plt.legend(loc='upper left')
 plt.savefig('partial_observation')
 plt.show()
 #%%
-
 itl_estimator.fit_closed_form(y_train)
 #
 # itl_estimator.model.G_x[1::7][:,1::7]
 #
- itl_estimator.risk(y_train)
+ itl_estimator.risk(y_train, mask)
 itl_estimator.risk(y_test)
 # itl_estimator.lbda_reg = 0.0000001
 # itl_estimator.mask = mask
