@@ -8,7 +8,7 @@ from .emotional_speech_datasets import Ravdess, KdefData
 from .emotional_speech_features import generate_training_samples
 
 np.random.seed(seed=21)
-
+import random
 
 def import_data_otoliths():
 
@@ -177,7 +177,8 @@ def import_kdef_landmark_synthesis(dtype='aligned'):
         torch.from_numpy(x_test).float(), torch.from_numpy(y_test).float()
 
 
-def kdef_landmarks_facealigner(path_to_landmarks, inp_emotion='NE', inc_emotion=False, relative=False):
+def kdef_landmarks_facealigner(path_to_landmarks, inp_emotion='NE', inc_emotion=False, relative=False, kfold=0,
+                               random_seed=21):
     # init lists
     train_list = []
     test_list = []
@@ -189,8 +190,17 @@ def kdef_landmarks_facealigner(path_to_landmarks, inp_emotion='NE', inc_emotion=
 
 
     # set test identities
-    # test_identities = ['F01', 'F02', 'F03', 'M01', 'M02', 'M03']
-    test_identities = ["F22", "M19", "M34", "M02", "M27", "F28", "M26"]
+    if kfold == 0:
+        # test_identities = ['F01', 'F02', 'F03', 'M01', 'M02', 'M03']
+        test_identities = ["F22", "M19", "M34", "M02", "M27", "F28", "M26"]
+    else:
+        shuffle_all_ids = all_ids.copy()
+        random.Random(random_seed).shuffle(shuffle_all_ids)
+        test_num = len(shuffle_all_ids)//10  # 90/10 split
+        if kfold <= len(shuffle_all_ids)//test_num:
+            test_identities = shuffle_all_ids[(kfold-1)*test_num:kfold*test_num]
+        else:
+            test_identities = shuffle_all_ids[(kfold-1)*test_num:]
 
     # define emotion list, same as in sampler (different abbrv. due to dataset)
     all_emotions = ['AF', 'AN', 'DI', 'HA', 'SA', 'SU', 'NE']
@@ -351,11 +361,131 @@ def kdef_landmarks_facenet(path_to_landmarks, path_to_emb, inp_emotion='NE', inc
            train_list, test_list
 
 
-def rafd_landmarks_facealigner(path_to_landmarks, path_to_csv, inp_emotion='neutral', inc_emotion=False):
+def kdef_landmarks_id_emo(path_to_landmarks, path_to_emb, inp_emotion='NE', inc_emotion=True, relative=False):
+    ### BIG WARNING!!!! ####
+    print('This function is currently hardcoded for NE input emotion, BE AWARE')
+
+    # init lists
+    train_list = []
+    test_list = []
+
+    emo_va = {'NE': [0, 0],
+              'HA': [0.6647930758154823, 0.07025315235958239],
+              'SA': [-0.6364936709598201, -0.25688320447600566],
+              'SU': [0.17960005233680493, 0.6894792038743631],
+              'AF': [-0.1253752865553082, 0.7655788112100937],
+              'DI': [-0.6943645673378837, 0.457145871269001],
+              'AN': [-0.452336028803629, 0.5656012294430937],
+              }
+
+    # generate ids + emotion lists (dataloader not trusted here)
+    fem_ids = ['F'+str(i).zfill(2) for i in range(1, 36)]
+    mal_ids = ['M'+str(i).zfill(2) for i in range(1, 36)]
+    all_ids = fem_ids + mal_ids
+
+
+    # set test identities
+    # test_identities = ['F01', 'F02', 'F03', 'M01', 'M02', 'M03']
+    test_identities = ["F22", "M19", "M34", "M02", "M27", "F28", "M26"]
+
+    # define emotion list, same as in sampler (different abbrv. due to dataset)
+    all_emotions = ['AF', 'AN', 'DI', 'HA', 'SA', 'SU', 'NE']
+    # find inp emotion index
+    inp_emo_idx = all_emotions.index(inp_emotion)
+
+    for sess in ['A', 'B']:
+        for p in all_ids:
+            # create file list for all emos
+            file_list = [sess + p + em + 'S.txt' for em in all_emotions]
+            if inc_emotion:
+                # if inc_emotion is True just include evth as target
+                xy_pair = [file_list[inp_emo_idx], file_list]
+            else:
+                # if not pop inp_emotion
+                inp_emotion_file = file_list.pop(inp_emo_idx)
+                xy_pair = [inp_emotion_file, file_list]
+            if p not in test_identities:
+                train_list.append(xy_pair)
+            else:
+                test_list.append(xy_pair)
+
+    train_input = []
+    train_output = []
+    test_input = []
+    test_output = []
+
+    # read input/output train
+    for row in train_list:
+        tmp_ne = np.load(os.path.join(path_to_emb, row[0].split('.')[0] + '.npy'))
+        train_input.append(np.concatenate([tmp_ne.flatten(), emo_va['NE']]))
+        tmp_ems = []
+        for i, row_em in enumerate(row[1]):
+            tmp_em = np.loadtxt(os.path.join(path_to_landmarks, row_em)).reshape(68, 2)
+            if 'NE' in row_em:
+                tmp_ems.append(np.concatenate([tmp_em.flatten(), emo_va[all_emotions[i]]]))
+            else:
+                tmp_ems.append(np.concatenate([tmp_em.flatten(),
+                                           emo_va[all_emotions[i]]/np.linalg.norm(emo_va[all_emotions[i]])]))
+        train_output.append(tmp_ems)
+
+    # read input/output test
+    for row in test_list:
+        tmp_ne = np.load(os.path.join(path_to_emb, row[0].split('.')[0] + '.npy'))
+        test_input.append(np.concatenate([tmp_ne.flatten(), emo_va['NE']]))
+        tmp_ems = []
+        for i, row_em in enumerate(row[1]):
+            tmp_em = np.loadtxt(os.path.join(path_to_landmarks, row_em)).reshape(68, 2)
+            if 'NE' in row_em:
+                tmp_ems.append(np.concatenate([tmp_em.flatten(), emo_va[all_emotions[i]]]))
+            else:
+                tmp_ems.append(np.concatenate([tmp_em.flatten(),
+                                               emo_va[all_emotions[i]] / np.linalg.norm(emo_va[all_emotions[i]])]))
+        test_output.append(tmp_ems)
+
+
+    im_size = 128
+    # normalize between [-1,1]
+    # train_input = (2 * np.array(train_input)/im_size) - 1
+    # train_output = (2 * np.array(train_output) / im_size) - 1
+    # test_input = (2 * np.array(test_input) / im_size) - 1
+    # test_output = (2 * np.array(test_output) / im_size) - 1
+
+    # normalize between [0,1]
+    train_input = np.array(train_input)
+    train_output = np.array(train_output) / im_size
+    test_input = np.array(test_input)
+    test_output = np.array(test_output) / im_size
+
+    # np.save('facealigner_train_input.npy', train_input)
+    # np.save('facealigner_train_output.npy', train_output)
+    # np.save('facealigner_test_input.npy', test_input)
+    # np.save('facealigner_test_output.npy', test_output)
+
+    return torch.from_numpy(train_input).float(), torch.from_numpy(train_output).float(),\
+           torch.from_numpy(test_input).float(), torch.from_numpy(test_output).float(), \
+           train_list, test_list
+
+
+
+
+def rafd_landmarks_facealigner(path_to_landmarks, path_to_csv, inp_emotion='neutral', inc_emotion=False, kfold=0,
+                               random_seed=21):
     train_list = []
     test_list = []
     all_ids = [str(i).zfill(2) for i in pd.read_csv(path_to_csv)['speaker'].unique().tolist()]
-    test_ids = ['25', '58', '72', '41', '35', '71']
+
+    # set test identities
+    if kfold == 0:
+        test_ids = ['25', '58', '72', '41', '35', '71']
+    else:
+        shuffle_all_ids = all_ids.copy()
+        random.Random(random_seed).shuffle(shuffle_all_ids)
+        test_num = len(shuffle_all_ids) // 10  # 90/10 split
+        if kfold <= len(shuffle_all_ids) // test_num:
+            test_ids = shuffle_all_ids[(kfold - 1) * test_num:kfold * test_num]
+        else:
+            test_ids = shuffle_all_ids[(kfold - 1) * test_num:]
+
     all_emotions = ['angry', 'contemptuous', 'disgusted', 'fearful', 'happy', 'sad', 'surprised', 'neutral']
 
     inp_emo_idx = all_emotions.index(inp_emotion)
@@ -379,7 +509,10 @@ def rafd_landmarks_facealigner(path_to_landmarks, path_to_csv, inp_emotion='neut
         assert set([fn[8:10] for fn in fnames]) == set([all_ids[i]])
         # woCON change 2 of 3
         assert set([fn.split('_')[4] for fn in fnames]) == set(all_emotions)- {'contemptuous'}
-        inp_im = fnames[inp_emo_idx-1]
+        if inp_emo_idx > 1:
+            inp_im = fnames[inp_emo_idx-1]
+        else:
+            inp_im = fnames[inp_emo_idx]
         # woCON change
         if not inc_emotion:
             fnames.remove(inp_im)
