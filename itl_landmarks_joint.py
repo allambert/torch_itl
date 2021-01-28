@@ -73,13 +73,13 @@ if kernel_input_learnable:
     n_h = 64
     d_out = 32
     model_kernel_input = torch.nn.Sequential(
-        torch.nn.Linear(nf, n_h),
+        torch.nn.Linear(x_train.shape[1], n_h),
         torch.nn.ReLU(),
         torch.nn.Linear(n_h, d_out)
     )
 
-    gamma_inp = 6
-    optim_params = dict(lr=0.0001, momentum=0, dampening=0,
+    gamma_inp = 3
+    optim_params = dict(lr=0.001, momentum=0, dampening=0,
                         weight_decay=0, nesterov=False)
 
     kernel_input = kernel.LearnableGaussian(
@@ -87,7 +87,7 @@ if kernel_input_learnable:
 else:
     NE = 1
     ne_fa = 50
-    gamma_inp = 0.5
+    gamma_inp = 0.2
     kernel_input = kernel.Gaussian(gamma_inp)
 
 # define emotion kernel
@@ -100,16 +100,15 @@ if output_var_dependence:
 else:
     kernel_freq = np.eye(nf)
 
-#%%
-# ----------------------------------
-# Define model
-# ----------------------------------
+# learning rate of alpha
+lr_alpha = 0.01
+
 itl_model = model.JointLandmarksSynthesisKernelModel(kernel_input, kernel_output,
                                              kernel_freq=torch.from_numpy(kernel_freq).float())
 
 # define cost function
 cost_function = cost.squared_norm_w_mask
-lbda = 0.001
+lbda = 0.001/7
 
 # define emotion sampler
 if theta_type == 'aff':
@@ -143,12 +142,19 @@ elif theta_type == '':
     sampler_ = sampler.CircularSampler(data=dataset,
                                        inc_emotion=inc_emotion)
 sampler_.m = m
-mask = torch.zeros(n,m,dtype=torch.bool)
+mask = torch.ones(n,m,dtype=torch.bool)
 #%%
-itl_estimator = estimator.ITLEstimatorJointPartial(itl_model, cost_function, lbda, 0, sampler_, mask)
+itl_estimator = estimator.ITLEstimatorJoint(itl_model, cost_function, lbda, 0, sampler_)
 #%%
+# ----------------------------------
+# Cross validation loop
+# -----------------------------------
 
-itl_estimator.fit_closed_form(y_train)
+
+
+
+
+
 
 #%%
 # ----------------------------------

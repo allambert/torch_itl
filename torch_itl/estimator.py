@@ -17,6 +17,12 @@ def inverse_reg_block(K1, K2, K3, lbda):
     inv_s = 1/ (s + lbda)
     return u @ torch.diag(inv_s) @ u.T
 
+def proj(alpha, kappa):
+    norm = torch.sqrt(torch.sum(alpha**2, axis=1))
+    mask = torch.where(norm > kappa)
+    alpha[mask] *= kappa / norm[mask].reshape((-1, 1))
+    return alpha
+
 class ITLEstimator(object):
     "ITL Class with fitting procedure using pytorch"
 
@@ -202,6 +208,16 @@ class ITLEstimatorJoint(object):
         pred = self.model.forward(self.model.x_train, self.model.thetas)
         return self.cost(self.model.y_train, pred, self.model.thetas)
 
+    def risk(self, data):
+        n, m, nf = data.shape
+        x = data.reshape(n*m, nf)
+        y = torch.zeros(n*m, m, nf)
+        for i in range(n*m):
+            y[i] = data[i//m]
+
+        pred = self.model.forward(x, self.model.thetas)
+        return self.cost(y, pred, self.model.thetas)
+
     def fast_objective(self):
         if not hasattr(self.model, 'G_x'):
             self.model.precompute_gram()
@@ -336,6 +352,53 @@ class ITLEstimatorJoint(object):
         self.model.alpha = (tmp @ y_train.reshape(-1,nf)).reshape(n*m, m, nf)
 
         print('alpha fitted, empirical risk=', self.training_risk())
+
+    def grad_huber(self, alpha):
+        return(self.lbda_reg*alpha + 1/self.model.n/self.model.m * (self.model.G_xt @ alpha
+               - self.model.y_train.reshape(self.model.n*self.model.m,-1)))
+
+    def huber_loss_reg(self, alpha):
+        return 0.5*torch.trace(self.lbda_reg * alpha @ alpha.T +
+                                1/self.model.n/self.model.m * (self.model.G_xt @ alpha @ alpha.T -
+                                2 * alpha @ self.model.y_train.reshape(self.model.n*self.model.m,-1).T))
+
+    def fit_huber(self, data, kappa, gamma, n_iter):
+
+        n, m, nf = data.shape
+        x_train = data.reshape(-1, nf)
+        y_train = torch.zeros(m*n, m, nf)
+        for i in range(m*n):
+            y_train[i] = data[i//m]
+
+        # n = self.model.mask.sum().item()
+        # _, m, nf = data.shape
+        # x_train = data.reshape(-1, nf)[self.model.mask]
+        # y_train = torch.zeros(n, m, nf)
+
+        self.model.n = n*m
+        self.model.m = m
+        self.sampler.m = m
+        self.model.thetas = self.sampler.sample(self.model.m)
+
+        self.model.x_train = x_train
+        self.model.y_train = y_train
+        if not hasattr(self.model, 'G_x'):
+            self.model.precompute_gram()
+
+        tmp = self.model.G_xt + self.lbda_reg *n*m*m * torch.eye(n*m*m)
+        tmp = torch.inverse(tmp)
+        alpha_0 = proj(tmp @ y_train.reshape(-1,nf), self.lbda_reg * n * m * m * kappa)
+
+        losses = []
+
+        for i in range(n_iter):
+            alpha_0 -= gamma * self.grad_huber(alpha_0)
+            alpha_0 = proj(alpha_0, self.lbda_reg * n * m * m * kappa)
+            losses.append(self.huber_loss_reg(alpha_0))
+
+        self.model.alpha = alpha_0.reshape(n*m, m, nf)
+
+        return(losses)
 
     def fit_kernel_input(self, x_train, y_train, n_epochs=150, solver='sgd', minibatch=False):
 
