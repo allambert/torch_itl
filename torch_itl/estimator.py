@@ -351,7 +351,7 @@ class ITLEstimatorJoint(object):
 
         self.model.alpha = (tmp @ y_train.reshape(-1,nf)).reshape(n*m, m, nf)
 
-        print('alpha fitted, empirical risk=', self.training_risk())
+        #print('alpha fitted, empirical risk=', self.training_risk())
 
     def grad_huber(self, alpha):
         return(self.lbda_reg*alpha + 1/self.model.n/self.model.m * (self.model.G_xt @ alpha

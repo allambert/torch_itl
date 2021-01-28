@@ -6,6 +6,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from torch_itl import model, sampler, cost, kernel, estimator
 
+#%%
 # ----------------------------------
 # Reading input/output data
 # ----------------------------------
@@ -18,40 +19,42 @@ use_facealigner = True  # bool to use aligned faces (for 'Rafd' - set to true)
 data_path = os.path.join('./datasets', dataset+'_Aligned', dataset +'_LANDMARKS')  # set data path
 data_emb_path = os.path.join('./datasets', dataset+'_Aligned', dataset +'_facenet')  # set data path
 
-if dataset == 'Rafd':
-    # dirty hack only used to get Rafd speaker ids, not continuously ordered
-    data_csv_path = '/home/mlpboon/Downloads/Rafd/Rafd.csv'
-affect_net_csv_path = ''  # to be set if theta_type == 'aff'
-output_folder = './LS_Experiments/'  # store all experiments in this output folder
-if not os.path.exists(output_folder):
-    os.mkdir(output_folder)
+def get_data(dataset, kfold=0):
+    if dataset == 'Rafd':
+        # dirty hack only used to get Rafd speaker ids, not continuously ordered
+        data_csv_path = '/home/mlpboon/Downloads/Rafd/Rafd.csv'
+    affect_net_csv_path = ''  # to be set if theta_type == 'aff'
+    output_folder = './LS_Experiments/'  # store all experiments in this output folder
+    if not os.path.exists(output_folder):
+        os.mkdir(output_folder)
 
-print('Reading data')
-if use_facealigner:
-    input_data_version = 'facealigner'
-    if dataset == 'KDEF':
-        from datasets.datasets import kdef_landmarks_facealigner, kdef_landmarks_facenet
-        # x_train, y_train, x_test, y_test, train_list, test_list = \
-        #     kdef_landmarks_facealigner(data_path, inp_emotion=inp_emotion,
-        #                                inc_emotion=inc_emotion)
-        x_train, y_train, x_test, y_test, train_list, test_list = \
-            kdef_landmarks_facenet(data_path, data_emb_path, inp_emotion=inp_emotion,
-                                       inc_emotion=inc_emotion)
-    elif dataset == 'Rafd':
-        from datasets.datasets import rafd_landmarks_facealigner
-        x_train, y_train, x_test, y_test, train_list, test_list = \
-            rafd_landmarks_facealigner(data_path, data_csv_path, inp_emotion=inp_emotion,
-                                       inc_emotion=inc_emotion)
-else:
-    from datasets.datasets import import_kdef_landmark_synthesis
-    input_data_version = 'aligned2'
-    x_train, y_train, x_test, y_test = import_kdef_landmark_synthesis(dtype=input_data_version)
+    #print('Reading data')
+    if use_facealigner:
+        input_data_version = 'facealigner'
+        if dataset == 'KDEF':
+            from datasets.datasets import kdef_landmarks_facealigner, kdef_landmarks_facenet
+            x_train, y_train, x_test, y_test, train_list, test_list = \
+                kdef_landmarks_facealigner(data_path, inp_emotion=inp_emotion,
+                                           inc_emotion=inc_emotion, kfold=kfold)
+        elif dataset == 'Rafd':
+            from datasets.datasets import rafd_landmarks_facealigner
+            x_train, y_train, x_test, y_test, train_list, test_list = \
+                rafd_landmarks_facealigner(data_path, data_csv_path, inp_emotion=inp_emotion,
+                                           inc_emotion=inc_emotion)
+    else:
+        from datasets.datasets import import_kdef_landmark_synthesis
+        input_data_version = 'aligned2'
+        x_train, y_train, x_test, y_test = import_kdef_landmark_synthesis(dtype=input_data_version)
+    return (y_train, y_test)
 
-n = x_train.shape[0]
-m = y_train.shape[1]
-nf = y_train.shape[2]
+
+#test of import
+data_train, data_test = get_data(dataset, 1)
+data_test
+n,m,nf = data_train.shape
 print('data dimensions', n, m, nf)
 
+#%%
 # ----------------------------------
 # Set kernel and other params
 # ----------------------------------
@@ -87,7 +90,7 @@ if kernel_input_learnable:
 else:
     NE = 1
     ne_fa = 50
-    gamma_inp = 0.2
+    gamma_inp = 3
     kernel_input = kernel.Gaussian(gamma_inp)
 
 # define emotion kernel
@@ -110,6 +113,7 @@ itl_model = model.JointLandmarksSynthesisKernelModel(kernel_input, kernel_output
 cost_function = cost.squared_norm_w_mask
 lbda = 0.001/7
 
+affect_net_csv_path = ''
 # define emotion sampler
 if theta_type == 'aff':
     if dataset == 'KDEF':
@@ -142,20 +146,44 @@ elif theta_type == '':
     sampler_ = sampler.CircularSampler(data=dataset,
                                        inc_emotion=inc_emotion)
 sampler_.m = m
+sampler_.sample(m)
 mask = torch.ones(n,m,dtype=torch.bool)
 #%%
 itl_estimator = estimator.ITLEstimatorJoint(itl_model, cost_function, lbda, 0, sampler_)
+itl_estimator.fit_closed_form(data_train)
+itl_estimator.training_risk()
+itl_estimator.risk(data_test)
+
+tmp = torch.zeros(10)
+for kfold in range(10):
+    data_train, data_test = get_data(dataset, kfold)
+    itl_estimator.fit_closed_form(data_train)
+    tmp[kfold] = itl_estimator.risk(data_test)
+
 #%%
 # ----------------------------------
 # Cross validation loop
 # -----------------------------------
+lbda_list = torch.logspace(-4,0,10)
+gamma_inp_list = torch.logspace(-1,1, 10)
+gamma_out_list = torch.logspace(-1,1, 10)
+risk = torch.zeros(10, 10, 10, 10)
 
+for i, lbda in enumerate(lbda_list):
+    itl_estimator.lbda_reg = lbda
+    for j, gamma_inp in enumerate(gamma_inp_list):
+        itl_estimator.model.kernel_input.gamma = gamma_inp
+        for k, gamma_out in enumerate(gamma_out_list):
+            itl_estimator.model.kernel_output.gamma = gamma_out
+            for kfold in range(10):
+                data_train, data_test = get_data(dataset, kfold)
+                itl_estimator.fit_closed_form(data_train)
+                print(i,j,k,kfold, itl_estimator.training_risk())
+                risk[i, j, k, kfold] = itl_estimator.risk(data_test)
 
-
-
-
-
-
+t = risk.mean(-1)
+t.argmin()
+lbda_list[1]
 #%%
 # ----------------------------------
 # Save model and params
@@ -308,6 +336,8 @@ elif sampling_type == 'radial':
 EM = EdgeMap(out_res=128, num_parts=1)
 #%%
 
+im_em = EM(data_train[0,0].detach().numpy().reshape(68,2)*128)
+plt.imshow(np.squeeze(im_em))
 #%matplotlib inline
 for i in range(len(sampled_emotions)):
     pred_test = itl_model.forward(x_test_joint, torch.from_numpy(sampled_emotions[i][np.newaxis]).float())
