@@ -53,7 +53,6 @@ data_train, data_test = get_data(dataset, 1)
 data_test
 n,m,nf = data_train.shape
 print('data dimensions', n, m, nf)
-
 #%%
 # ----------------------------------
 # Set kernel and other params
@@ -150,24 +149,17 @@ sampler_.sample(m)
 mask = torch.ones(n,m,dtype=torch.bool)
 #%%
 itl_estimator = estimator.ITLEstimatorJoint(itl_model, cost_function, lbda, 0, sampler_)
-itl_estimator.fit_closed_form(data_train)
-itl_estimator.training_risk()
-itl_estimator.risk(data_test)
-
-tmp = torch.zeros(10)
-for kfold in range(10):
-    data_train, data_test = get_data(dataset, kfold)
-    itl_estimator.fit_closed_form(data_train)
-    tmp[kfold] = itl_estimator.risk(data_test)
-
 #%%
 # ----------------------------------
 # Cross validation loop
 # -----------------------------------
-lbda_list = torch.logspace(-4,0,10)
-gamma_inp_list = torch.logspace(-1,1, 10)
-gamma_out_list = torch.logspace(-1,1, 10)
-risk = torch.zeros(10, 10, 10, 10)
+n_lbda = 6
+n_gamma_inp = 6
+n_gamma_out  = 6
+lbda_list = torch.logspace(-6,-4, n_lbda)
+gamma_inp_list = torch.logspace(-1.5,-0.5, n_gamma_inp)
+gamma_out_list = torch.logspace(-1,0, n_gamma_out)
+risk = torch.zeros(n_lbda, n_gamma_inp, n_gamma_out, 10)
 
 for i, lbda in enumerate(lbda_list):
     itl_estimator.lbda_reg = lbda
@@ -177,13 +169,81 @@ for i, lbda in enumerate(lbda_list):
             itl_estimator.model.kernel_output.gamma = gamma_out
             for kfold in range(10):
                 data_train, data_test = get_data(dataset, kfold)
-                itl_estimator.fit_closed_form(data_train)
-                print(i,j,k,kfold, itl_estimator.training_risk())
+                itl_estimator.fit_closed_form(data_train, warm_start=False)
+                #print(i,j,k,kfold, itl_estimator.training_risk())
                 risk[i, j, k, kfold] = itl_estimator.risk(data_test)
 
-t = risk.mean(-1)
-t.argmin()
-lbda_list[1]
+#%%
+# Getting best hyperparameter values
+risk.mean(-1).max()
+print('Minimum test error:', risk.mean(-1).min())
+t =risk.mean(-1).argmin()
+gamma_out = gamma_out_list[t%n_gamma_out]
+gamma_inp = gamma_inp_list[(t//n_gamma_out)%n_gamma_inp]
+lbda = lbda_list[(t//n_gamma_out)//n_gamma_inp]
+print('Best lbda:', lbda)
+print('Best gamma_inp', gamma_inp)
+print('Best gamma_out', gamma_out)
+
+torch.log10(lbda)
+torch.log10(gamma_inp)
+torch.log10(gamma_out)
+
+#%%
+n_lbda = 6
+n_gamma_inp = 3
+n_gamma_out  = 3
+lbda_list = torch.logspace(-6,-4, n_lbda)
+gamma_inp_list = torch.logspace(-1.6,-1., n_gamma_inp)
+gamma_out_list = torch.logspace(-0.8,0, n_gamma_out)
+risk = torch.zeros(10, 6, n_lbda, n_gamma_inp, n_gamma_out)
+for kfold in range(10):
+    data, data_test = get_data(dataset, kfold)
+    n = data.shape[0]
+    mask = torch.randperm(n)
+    for kval in range(6):
+        mask_train = ( mask >= 21*(kval+1)) + ( 21*kval > mask )
+        mask_test = (mask < 21*(kval+1))*(mask >= 21*kval)
+        data_train = data[mask_train]
+        data_val = data[mask_test]
+        for i, lbda in enumerate(lbda_list):
+            itl_estimator.lbda_reg = lbda
+            for j, gamma_inp in enumerate(gamma_inp_list):
+                itl_estimator.model.kernel_input.gamma = gamma_inp
+                for k, gamma_out in enumerate(gamma_out_list):
+                    itl_estimator.model.kernel_output.gamma = gamma_out
+                    itl_estimator.fit_closed_form(data_train, warm_start=False)
+                    risk[kfold, kval, i, j, k] = itl_estimator.risk(data_val)
+#%%
+print('test')
+gamma_inp_argmin = torch.ones(10)
+gamma_out_argmin = torch.ones(10)
+lbda_argmin = torch.ones(10)
+
+for kfold in range(10):
+    t = risk[kfold].mean(0).argmin()
+    gamma_out_argmin[kfold] = gamma_out_list[t%n_gamma_out]
+    gamma_inp_argmin[kfold] = gamma_inp_list[(t//n_gamma_out)%n_gamma_inp]
+    lbda_argmin[kfold] = lbda_list[(t//n_gamma_out)//n_gamma_inp]
+#%%
+gamma_out_argmin
+#%%
+tmp = torch.zeros(10)
+for kfold in range(10):
+    itl_estimator.lbda_reg = lbda_argmin[kfold]
+    itl_estimator.model.kernel_input.gamma = gamma_inp_argmin[kfold]
+    itl_estimator.model.kernel_output.gamma = gamma_out_argmin[kfold]
+    data_train, data_test = get_data(dataset, kfold)
+    itl_estimator.fit_closed_form(data_train, warm_start=False)
+    tmp[kfold] = itl_estimator.risk(data_test)
+
+tmp.mean()-0.0109
+#%%
+
+torch.save(lbda_argmin, dataset+'_joint_emotion_lbdas.pt')
+torch.save(gamma_inp_argmin, dataset+'_joint_emotion_gamma_inp.pt')
+torch.save(gamma_out_argmin, dataset+'_joint_emotion_gamma_out.pt')
+
 #%%
 # ----------------------------------
 # Save model and params

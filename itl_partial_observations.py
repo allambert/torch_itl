@@ -4,6 +4,7 @@ import time
 import torch
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 from torch_itl import model, sampler, cost, kernel, estimator
 
 # ----------------------------------
@@ -18,40 +19,40 @@ use_facealigner = True  # bool to use aligned faces (for 'Rafd' - set to true)
 data_path = os.path.join('./datasets', dataset+'_Aligned', dataset +'_LANDMARKS')  # set data path
 data_emb_path = os.path.join('./datasets', dataset+'_Aligned', dataset +'_facenet')  # set data path
 
-if dataset == 'Rafd':
-    # dirty hack only used to get Rafd speaker ids, not continuously ordered
-    data_csv_path = '/home/mlpboon/Downloads/Rafd/Rafd.csv'
-affect_net_csv_path = ''  # to be set if theta_type == 'aff'
-output_folder = './LS_Experiments/'  # store all experiments in this output folder
-if not os.path.exists(output_folder):
-    os.mkdir(output_folder)
+def get_data(dataset, kfold=0):
+    if dataset == 'Rafd':
+        # dirty hack only used to get Rafd speaker ids, not continuously ordered
+        data_csv_path = '/home/mlpboon/Downloads/Rafd/Rafd.csv'
+    affect_net_csv_path = ''  # to be set if theta_type == 'aff'
+    output_folder = './LS_Experiments/'  # store all experiments in this output folder
+    if not os.path.exists(output_folder):
+        os.mkdir(output_folder)
 
-print('Reading data')
-if use_facealigner:
-    input_data_version = 'facealigner'
-    if dataset == 'KDEF':
-        from datasets.datasets import kdef_landmarks_facealigner, kdef_landmarks_facenet
-        # x_train, y_train, x_test, y_test, train_list, test_list = \
-        #     kdef_landmarks_facealigner(data_path, inp_emotion=inp_emotion,
-        #                                inc_emotion=inc_emotion)
-        x_train, y_train, x_test, y_test, train_list, test_list = \
-            kdef_landmarks_facenet(data_path, data_emb_path, inp_emotion=inp_emotion,
-                                       inc_emotion=inc_emotion)
-    elif dataset == 'Rafd':
-        from datasets.datasets import rafd_landmarks_facealigner
-        x_train, y_train, x_test, y_test, train_list, test_list = \
-            rafd_landmarks_facealigner(data_path, data_csv_path, inp_emotion=inp_emotion,
-                                       inc_emotion=inc_emotion)
-else:
-    from datasets.datasets import import_kdef_landmark_synthesis
-    input_data_version = 'aligned2'
-    x_train, y_train, x_test, y_test = import_kdef_landmark_synthesis(dtype=input_data_version)
+    #print('Reading data')
+    if use_facealigner:
+        input_data_version = 'facealigner'
+        if dataset == 'KDEF':
+            from datasets.datasets import kdef_landmarks_facealigner, kdef_landmarks_facenet
+            x_train, y_train, x_test, y_test, train_list, test_list = \
+                kdef_landmarks_facealigner(data_path, inp_emotion=inp_emotion,
+                                           inc_emotion=inc_emotion, kfold=kfold)
+        elif dataset == 'Rafd':
+            from datasets.datasets import rafd_landmarks_facealigner
+            x_train, y_train, x_test, y_test, train_list, test_list = \
+                rafd_landmarks_facealigner(data_path, data_csv_path, inp_emotion=inp_emotion,
+                                           inc_emotion=inc_emotion, kfold=kfold)
+    else:
+        from datasets.datasets import import_kdef_landmark_synthesis
+        input_data_version = 'aligned2'
+        x_train, y_train, x_test, y_test = import_kdef_landmark_synthesis(dtype=input_data_version)
+    return (y_train, y_test)
 
-n = x_train.shape[0]
-m = y_train.shape[1]
-nf = y_train.shape[2]
+
+#test of import
+data_train, data_test = get_data(dataset, 1)
+data_test
+n,m,nf = data_train.shape
 print('data dimensions', n, m, nf)
-
 # ----------------------------------
 # Set kernel and other params
 # ----------------------------------
@@ -78,7 +79,7 @@ if kernel_input_learnable:
         torch.nn.Linear(n_h, d_out)
     )
 
-    gamma_inp = 3
+    gamma_inp = 0.1
     optim_params = dict(lr=0.001, momentum=0, dampening=0,
                         weight_decay=0, nesterov=False)
 
@@ -87,11 +88,11 @@ if kernel_input_learnable:
 else:
     NE = 1
     ne_fa = 50
-    gamma_inp = 3
+    gamma_inp = 0.1
     kernel_input = kernel.Gaussian(gamma_inp)
 
 # define emotion kernel
-gamma_out = 1.0
+gamma_out = 0.5
 kernel_output = kernel.Gaussian(gamma_out)
 
 # Define PSD matrix on output variables
@@ -103,8 +104,9 @@ else:
 # learning rate of alpha
 lr_alpha = 0.01
 #%%
-# y_train = 2*y_train -1
-# y_test = 2*y_test -1
+gamma_inp_list = torch.load('KDEF_joint_emotion_gamma_inp.pt')
+gamma_out_list = torch.load('KDEF_joint_emotion_gamma_out.pt')
+lbda_list = torch.load('KDEF_joint_emotion_lbdas.pt')
 #%%
 # ----------------------------------
 # Define model
@@ -114,8 +116,9 @@ itl_model = model.JointLandmarksSynthesisKernelModel(kernel_input, kernel_output
 
 # define cost function
 cost_function = cost.squared_norm_w_mask
-lbda = 0.001/7
+lbda = 0.0001
 
+affect_net_csv_path = ''
 # define emotion sampler
 if theta_type == 'aff':
     if dataset == 'KDEF':
@@ -148,49 +151,53 @@ elif theta_type == '':
     sampler_ = sampler.CircularSampler(data=dataset,
                                        inc_emotion=inc_emotion)
 sampler_.m = m
-mask = torch.ones(n,m,dtype=torch.bool)
+sampler_.sample(m)
 #%%
+mask = torch.ones(n,m,dtype=torch.bool)
 itl_estimator = estimator.ITLEstimatorJointPartial(itl_model, cost_function, lbda, 0, sampler_, mask)
 
 #%%
 # ----------------------------------
 # Training
 # ----------------------------------
-# Creation of the masks
-n_loops = 10
-mask_list = [torch.randperm(n*m).reshape(n, m) for j in range(n_loops)]
-# Creation of test mask
-n_test = y_test.shape[0]
-mask_test = torch.ones(n_test*m, m, dtype=torch.bool)
+n_loops = 4
 #results tensor
-test_losses = torch.zeros(n_loops, n)
+test_losses = torch.zeros(10, n_loops, n)
 
-for j in range(n_loops):
-    mask_level = mask_list[j]
-    for i in torch.arange(n*m)[::7]:
-        itl_estimator.mask = (mask_level >= i)
-        itl_estimator.fit_closed_form(y_train)
-        test_losses[j,i//7] = itl_estimator.risk(y_test, mask_test)
-    print('done with loop ',j)
+for kfold in range(10):
+    data_train, data_test = get_data(dataset, kfold)
+    mask_list = [torch.randperm(n*m).reshape(n, m) for j in range(n_loops)]
+    for j in range(n_loops):
+        mask_level = mask_list[j]
+        for i in torch.arange(n*m)[::7]:
+            itl_estimator.mask = (mask_level >= i)
+            itl_estimator.fit_closed_form(data_train)
+            test_losses[kfold,j,i//7] = itl_estimator.risk(data_test)
+    print('done with kfold ', kfold)
 
 #%%
-idx_loss = torch.arange(n*m)[::7].float() / n / m
-min_risk = test_losses[:,0].mean()
-log_test_losses = torch.log(test_losses/min_risk)
+torch.save(test_losses, 'kdef_partial.pt')
+#%%
+risks_kdef = torch.load('kdef_partial.pt').mean(0).mean(0)
+risks_rafd = torch.load('rafd_partial.pt').mean(0).mean(0)
+idx_loss_kdef = torch.arange(n*m)[::7].float() / n / m
+idx_loss_rafd = torch.arange(risks_rafd.shape[0]*m)[::7].float() / risks_rafd.shape[0]/m
+min_risk_kdef = risks_kdef[0]
+min_risk_rafd = risks_rafd[0]
+log_risks_kdef = torch.log10(risks_kdef)
+log_risks_rafd = torch.log10(risks_rafd)
 #%%
 plt.figure()
-plt.xlabel("% of unseen data")
-plt.ylabel("log ratio of test risk")
-for j in range(n_loops):
-    if j==0:
-        plt.plot(idx_loss, log_test_losses[j], c='b', alpha=0.1, label='single loops')
-    else:
-        plt.plot(idx_loss, log_test_losses[j], c='b', alpha=0.1)
-plt.plot(idx_loss, log_test_losses.mean(0), c='k', label='averaged')
+plt.xlabel("% of missing data")
+plt.ylabel("$\log_{10}$ Test MSE")
+colors = [cm.viridis(i) for i in torch.linspace(0,0.8,2)]
+plt.plot(idx_loss_kdef, log_risks_kdef, c='black', label='KDEF', marker=',')
+plt.plot(idx_loss_rafd, log_risks_rafd, c='grey', label='RaFD', marker=',')
 plt.legend(loc='upper left')
-plt.savefig('partial_observation')
+plt.savefig('partial_observation.pdf')
 plt.show()
 #%%
+torch.exp(torch.Tensor([0.5]))
 itl_estimator.fit_closed_form(y_train)
 #
 # itl_estimator.model.G_x[1::7][:,1::7]

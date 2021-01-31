@@ -490,7 +490,7 @@ def rafd_landmarks_facealigner(path_to_landmarks, path_to_csv, inp_emotion='neut
 
     inp_emo_idx = all_emotions.index(inp_emotion)
     num_emos = len(all_emotions)
-    print(num_emos)
+    #print(num_emos)
     sorted_lnd_list = sorted(os.listdir(path_to_landmarks))
 
     for i in range(len(all_ids)):
@@ -501,7 +501,7 @@ def rafd_landmarks_facealigner(path_to_landmarks, path_to_csv, inp_emotion='neut
 
         #woCON change 1 of 3
         con_im = fnames.pop(1)
-        print(con_im)
+        #print(con_im)
         #woCON change
 
         # print(fnames)
@@ -581,4 +581,3 @@ def import_affectnet_va_embedding(affect_net_csv_path):
          'Anger': [-0.452336028803629, 0.5656012294430937],
          'Contempt': [-0.5138537435929467, 0.5825553992724378]}
     return emo_va
-
