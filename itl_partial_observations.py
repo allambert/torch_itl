@@ -178,21 +178,57 @@ for kfold in range(10):
 #%%
 torch.save(test_losses, 'kdef_partial.pt')
 #%%
-risks_kdef = torch.load('kdef_partial.pt').mean(0).mean(0)
-risks_rafd = torch.load('rafd_partial.pt').mean(0).mean(0)
-idx_loss_kdef = torch.arange(n*m)[::7].float() / n / m
-idx_loss_rafd = torch.arange(risks_rafd.shape[0]*m)[::7].float() / risks_rafd.shape[0]/m
-min_risk_kdef = risks_kdef[0]
-min_risk_rafd = risks_rafd[0]
-log_risks_kdef = torch.log10(risks_kdef)
-log_risks_rafd = torch.log10(risks_rafd)
+risks_kdef = torch.load('kdef_partial.pt').mean(1)
+risks_rafd = torch.load('rafd_partial.pt').mean(1)
+idx_kdef = torch.arange(n*m)[::7].float() / n / m
+idx_rafd = torch.arange(risks_rafd.shape[1]*m)[::7].float() / risks_rafd.shape[1]/m
 #%%
+mean_kdef = risks_kdef.mean(0)
+max_kdef , _ = risks_kdef.max(axis=0)
+min_kdef , _ = risks_kdef.min(axis=0)
+
+mean_rafd = risks_rafd.mean(0)
+max_rafd , _ = risks_rafd.max(axis=0)
+min_rafd , _ = risks_rafd.min(axis=0)
+
+
+#log_mean_kdef = torch.log(risks_kdef.mean(0))
+std_kdef = ((mean_kdef - risks_kdef)**2).mean(0).sqrt()
+
+std_kdef
+
+std_rafd =  ((log_risks_rafd - log_risks_rafd.mean(0))**2).mean(0).sqrt()
+
+risks_rafd.shape
+log_risks_kdef = torch.log(risks_kdef)
+log_risks_rafd = torch.log(risks_rafd)
+
+std_kdef
+risks_rafd
+
+std_rafd =  ((log_risks_rafd - log_risks_rafd.mean(0))**2).mean(0).sqrt()
+std_kdef = ((log_risks_kdef - log_risks_kdef.mean(0))**2).mean(0).sqrt()
+log_std_rafd_plus = torch.log(risks_rafd.mean(0) + std_rafd )
+log_std_rafd_minus = torch.log(risks_rafd.mean(0) - std_rafd )
+log_std_kdef_plus = torch.log(risks_kdef.mean(0) + std_kdef )
+log_std_kdef_minus = torch.log(risks_kdef.mean(0) - std_kdef )
+#%%
+
+#%%
+log_risks_rafd.shape
+idx_loss_rafd.shape
 plt.figure()
 plt.xlabel("% of missing data")
 plt.ylabel("$\log_{10}$ Test MSE")
 colors = [cm.viridis(i) for i in torch.linspace(0,0.8,2)]
-plt.plot(idx_loss_kdef, log_risks_kdef, c='black', label='KDEF', marker=',')
-plt.plot(idx_loss_rafd, log_risks_rafd, c='grey', label='RaFD', marker=',')
+plt.plot(idx_kdef, torch.log(mean_kdef), c='black', label='KDEF mean', marker=',')
+plt.plot(idx_kdef, torch.log(min_kdef), c='black', label='KDEF min-max', linestyle='--')
+plt.plot(idx_kdef, torch.log(max_kdef), c='black', linestyle='--')
+#
+plt.plot(idx_rafd, torch.log(mean_rafd), c='grey', label='RaFD mean', marker=',')
+plt.plot(idx_rafd, torch.log(min_rafd), c='grey', label='RaFD min-max', linestyle='--')
+plt.plot(idx_rafd, torch.log(max_rafd), c='grey', linestyle='--')
+#plt.plot(idx_rafd, log_risks_rafd, c='grey', label='RaFD', marker=',')
 plt.legend(loc='upper left')
 plt.savefig('partial_observation.pdf')
 plt.show()
