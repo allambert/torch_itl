@@ -9,9 +9,9 @@ class EmoTransfer(VITL):
     'Emotion Transfer Using Vector-Valued Infinite Task Learning'
     """
 
-    def __init__(self, model, lbda, sampler, input_type, inc_emotion=True):
+    def __init__(self, model, lbda, sampler, imp_emotion='joint', inc_emotion=True):
         super().__init__(model, squared_norm, lbda, sampler)
-        self.input_type = input_type
+        self.imp_emotion = imp_emotion
         self.inc_emotion = inc_emotion
 
     def initialise(self, data):
@@ -29,7 +29,7 @@ class EmoTransfer(VITL):
         """
         n, m, nf = data.shape
 
-        if self.input_type == 'joint':
+        if self.imp_emotion == 'joint':
             x_train = data.reshape(-1, nf)
             y_train = torch.zeros(m * n, m, nf)
             for i in range(m * n):
@@ -38,16 +38,16 @@ class EmoTransfer(VITL):
             self.model.m = m
 
         else:
-            x_train = data[:, self.input_type, :]
+            x_train = data[:, self.imp_emotion, :]
             if self.inc_emotion:
                 y_train = data
                 thetas = self.sampler.sample()
                 self.model.m = m
             else:
-                mask = [i != input_type for i in range(m)]
+                mask = [i != imp_emotion for i in range(m)]
                 y_train = data[:, mask, :]
                 thetas = self.sampler.sample()[mask]
-                self.model.m = m-1
+                self.model.m = m - 1
 
         self.model.thetas = thetas
         self.model.n = x_train.shape[0]
@@ -67,18 +67,18 @@ class EmoTransfer(VITL):
             risk of the predictor on the data
         """
         n, m, nf = data.shape
-        if self.input_type == 'joint':
+        if self.imp_emotion == 'joint':
             x = data.reshape(-1, nf)
             y = torch.zeros(m * n, m, nf)
             for i in range(m * n):
                 y[i] = data[i // m]
 
         else:
-            x = data[:, self.input_type, :]
+            x = data[:, self.imp_emotion, :]
             if self.inc_emotion:
                 y = data
             else:
-                mask = [i != input_type for i in range(m)]
+                mask = [i != imp_emotion for i in range(m)]
                 y = data[:, mask, :]
 
         if thetas is None:
@@ -114,7 +114,7 @@ class EmoTransfer(VITL):
         data: torch.Tensor of shape (n_samples, n_emotions, n_landmarks)
             Input vector of data
         verbose: Bool
-            final print of the empirical risk (or not)
+            some prints along the way (or not)
         Returns
         -------
         Nothing
@@ -161,9 +161,9 @@ class EmoTransfer(VITL):
         -------
         Nothing
         """
-        pass
+        
 
-    def fit_dim_red(self, data, s):
+    def fit_dim_red(self, data, r, verbose=False):
         """
         Fits the emotion transfer model by a closed form solution
         with low rank matrix A based on SVD of the data covariance
@@ -172,15 +172,40 @@ class EmoTransfer(VITL):
         ----------
         data: torch.Tensor of shape (n_samples, n_emotions, n_landmarks)
            Input vector of data
-        s: Int
+        r: Int
             Rank of A
         Returns
         -------
         Nothing
         """
+        if verbose:
+            print('Computing Gram matrices')
         self.initialise(data)
         self.model.compute_gram_train()
 
-        cor = 1/self.model.n * self.model.y_train.T @ self.model.y_train
+        tmp = self.model.G_xt + self.lbda * self.model.n * self.model.m * \
+            torch.eye(self.model.n * self.model.m)
+
+        if verbose:
+            print('Computing SVD of empirical covariance')
+        cor = 1 / self.model.n * \
+            self.model.y_train.reshape(
+                -1, self.model.output_dim).T @ self.model.y_train.reshape(-1, self.model.output_dim)
         u, d, v = torch.svd(cor)
-        
+
+        identity_r = torch.diag_embed(torch.Tensor([1 for i in range(r)] +
+                                                   [0 for i in range(self.model.output_dim - r)]))
+        proj_r = identity_r[:, :r]
+
+        if verbose:
+            print("Solving the associated linear system")
+        gamma_r, _ = torch.solve(
+            self.model.y_train.reshape(-1, self.model.output_dim) @ v @ proj_r, tmp)
+
+        self.model.alpha = gamma_r @ proj_r.T @ v.T
+
+        self.model.A = v @ identity_r @ v.T
+
+        if verbose:
+            print('Coefficients alpha fitted, empirical risk=',
+                  self.training_risk())

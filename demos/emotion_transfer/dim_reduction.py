@@ -1,3 +1,7 @@
+# This script illustrate that we can reduce the dimensionality of our model
+# when using vITL by choosing A to be a non-invertible well chosen
+# matrix, built upon the empirical covariance matrix
+# Runtime ~15 min on laptop
 # ----------------------------------
 # Imports
 # ----------------------------------
@@ -89,7 +93,63 @@ sampler = CircularEmoSampler(dataset=dataset)
 
 # define regularization
 lbda = 2e-5
-#%%
-#
-est = EmoTransfer(model, lbda,  sampler, input_type='joint')
-#%%
+
+# defining the model
+est = EmoTransfer(model, lbda,  sampler)
+
+# %%
+# ----------------------------------
+# Fitting fewer coefficients with non invertible matrix A -- KDEF
+# ----------------------------------
+losses_kdef = torch.zeros(10, nf)
+for kfold in range(10):
+    data_train, data_test = get_data(dataset, kfold)
+    for r in range(nf):
+        est.fit_dim_red(data_train, r+1)
+        losses_kdef[kfold, r] = est.risk(data_test)
+
+
+# %%
+# ----------------------------------
+# Fitting fewer coefficients with non invertible matrix A -- Rafd
+# ----------------------------------
+dataset = 'Rafd'
+est.sampler.dataset = dataset
+data_path = os.path.join('../../' + './datasets', dataset +
+                         '_Aligned', dataset + '_LANDMARKS')  # set data path
+data_emb_path = os.path.join(
+    '../../' + './datasets', dataset + '_Aligned', dataset + '_facenet')  # set data path
+
+losses_rafd = torch.zeros(10, nf)
+for kfold in range(1,11):
+    data_train, data_test = get_data(dataset, kfold)
+    for r in range(nf):
+        est.fit_dim_red(data_train, r+1)
+        losses_rafd[kfold-1, r] = est.risk(data_test)
+
+
+# %%
+# ----------------------------------
+# Saving the results
+# ----------------------------------
+#torch.save(losses_kdef,'dim_red_kdef.pt')
+#torch.save(losses_rafd,'dim_red_rafd.pt')
+# %%
+# ----------------------------------
+# Plotting
+# ----------------------------------
+std_rafd = ((losses_rafd - losses_rafd.mean(0))**2).mean(0).sqrt()
+std_kdef = ((losses_kdef - losses_kdef.mean(0))**2).mean(0).sqrt()
+plt.figure()
+plt.xlabel('Rank of $\mathbf{A}$')
+plt.ylabel('Test MSE')
+plt.plot(losses_kdef.mean(0), c='black', label='KDEF mean', marker=',')
+plt.plot(losses_kdef.mean(0) + std_kdef, c='black', label='KDEF mean $\pm \sigma$', linestyle='--')
+plt.plot(losses_kdef.mean(0) - std_kdef, c='black', linestyle='--')
+plt.plot(losses_rafd.mean(0), c= 'grey', label='RaFD mean', marker=',')
+plt.plot(losses_rafd.mean(0) + std_rafd, c= 'grey', label='RaFD mean $\pm \sigma$', linestyle='--')
+plt.plot(losses_rafd.mean(0) - std_rafd, c= 'grey', linestyle='--')
+
+plt.legend(loc='upper right')
+plt.savefig('dim_red.pdf')
+plt.show()

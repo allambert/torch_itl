@@ -26,10 +26,10 @@ dataset = 'KDEF'  # KDEF or Rafd
 inc_emotion = True  # bool to include (0,0) in emotion embedding
 use_facealigner = True  # bool to use aligned faces (for 'Rafd' - set to true)
 
-data_path = os.path.join('../../' + './datasets', dataset +
+data_path = os.path.join('../../datasets', dataset +
                          '_Aligned', dataset + '_LANDMARKS')  # set data path
-data_emb_path = os.path.join(
-    '../../' + './datasets', dataset + '_Aligned', dataset + '_facenet')  # set data path
+data_emb_path = os.path.join('../../datasets', dataset +
+                              '_Aligned', dataset + '_facenet')  # set data path
 
 
 def get_data(dataset, kfold=0):
@@ -157,9 +157,9 @@ print("Mean Test Stds:", test_stds_kdef)
 
 #%%
 
-# torch.save(lbda_argmin_kdef, dataset+'_lbdas.pt')
-# torch.save(gamma_inp_argmin_kdef, dataset+'_gamma_inp.pt')
-# torch.save(gamma_out_argmin_kdef, dataset+'_gamma_out.pt')
+torch.save(lbda_argmin_kdef, 'KDEF_lbdas.pt')
+torch.save(gamma_inp_argmin_kdef, 'KDEF_gamma_inp.pt')
+torch.save(gamma_out_argmin_kdef, 'KDEF_gamma_out.pt')
 
 #%%
 # ----------------------------------
@@ -167,7 +167,7 @@ print("Mean Test Stds:", test_stds_kdef)
 # ----------------------------------
 dataset = 'Rafd'
 est.sampler.dataset = dataset # KDEF or Rafd
-inp_emotion = 'neutral'
+
 data_path = os.path.join('../../' + './datasets', dataset +
                          '_Aligned', dataset + '_LANDMARKS')  # set data path
 data_emb_path = os.path.join(
@@ -232,3 +232,9 @@ test_stds_rafd = ((test_risks_rafd - test_means_rafd.view(-1,1))**2).mean(1).sqr
 #%%
 print("Mean Test Errors:", test_means_rafd)
 print("Mean Test Stds:", test_stds_rafd)
+
+#%%
+
+torch.save(lbda_argmin_rafd, 'Rafd_lbdas.pt')
+torch.save(gamma_inp_argmin_rafd, 'Rafd_gamma_inp.pt')
+torch.save(gamma_out_argmin_rafd, 'Rafd_gamma_out.pt')

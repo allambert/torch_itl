@@ -1,5 +1,6 @@
 import torch
 
+
 def proj(alpha, kappa):
     norm = torch.sqrt(torch.sum(alpha**2, axis=1))
     mask = torch.where(norm > kappa)
@@ -19,6 +20,7 @@ def bst(alpha, tau):
 
 def iht(alpha, tau):
     return torch.where(alpha.abs() - tau < 0, torch.zeros_like(alpha), alpha.abs() - tau) * torch.sign(alpha)
+
 
 def squared_norm(y_true, y_pred, thetas, mask=None):
     residual = y_true - y_pred

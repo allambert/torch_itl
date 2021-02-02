@@ -140,12 +140,7 @@ class VITL(object):
             self.losses = []
             self.times = [0]
 
-        if solver == 'lbfgs':
-            optimizer_alpha = optim.LBFGS([self.model.alpha], **kwargs)
-        elif solver == 'sgd':
-            optimizer_alpha = optim.SGD([self.model.alpha], **kwargs)
-        elif solver == 'adam':
-            optimizer_alpha = optim.Adam([self.model.alpha], **kwargs)
+        optimizer_alpha = solver([self.model.alpha], **kwargs)
 
         def closure_alpha():
             loss = self.objective(x, y, self.model.thetas)
@@ -161,10 +156,10 @@ class VITL(object):
             self.times.append(time.time() - t0)
             optimizer_alpha.step(closure_alpha)
 
-    def fit_kernel_input(self, x, y, n_epochs=150, solver='sgd'):
+    def fit_kernel_input(self, x, y, n_epochs=150):
         """
         Fits the parameters of the neural network associated to the input kernel
-        (deep kernel learning)
+        (deep kernel learning) with gradient descent
         Parameters
         ----------
         x: torch.Tensor of shape (n_samples, n_features_1)
@@ -173,8 +168,6 @@ class VITL(object):
             Output vector of samples used in the empirical risk
         n_epochs: Int
             Max number of iterations for training
-        solver: String
-            Prefered gradient descent algorithm -- beware to match **kwargs
         warm_start: Bool
             Keep previous estimate of alpha (or not)
         **kwargs:
@@ -210,7 +203,7 @@ class VITL(object):
             self.model.kernel_input.times.append(time.time() - t0)
             optimizer_kernel.step(closure_kernel)
 
-    def fit_kernel_output(self, x, y, n_epochs=150, solver='sgd'):
+    def fit_kernel_output(self, x, y, n_epochs=150):
         """
         Fits the parameters of the neural network associated to the output kernel
         (deep kernel learning)
@@ -222,8 +215,6 @@ class VITL(object):
             Output vector of samples used in the empirical risk
         n_epochs: Int
             Max number of iterations for training
-        solver: String
-            Prefered gradient descent algorithm -- beware to match **kwargs
         warm_start: Bool
             Keep previous estimate of alpha (or not)
         **kwargs:
