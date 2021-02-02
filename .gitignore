@@ -1,4 +1,8 @@
 .DS_Store
 torch_itl/__pycache__/
+torch_itl/estimator/__pycache__/
+torch_itl/kernel/__pycache__/
+torch_itl/model/__pycache__/
+torch_itl/sampler/__pycache__/
 datasets/__pycache__/
 junk_test.py
