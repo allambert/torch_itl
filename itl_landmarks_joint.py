@@ -145,8 +145,20 @@ elif theta_type == '':
     sampler_ = sampler.CircularSampler(data=dataset,
                                        inc_emotion=inc_emotion)
 sampler_.m = m
+#%%
+colors = ['k','y','y','y','y','y','y']
+import matplotlib.cm as cm
+plt.figure()
+for i, theta in enumerate(sampler_.sample(m)):
+    plt.scatter(theta[0],theta[1], c=colors[i])
+plt.show()
+
+#%%
 sampler_.sample(m)
 mask = torch.ones(n,m,dtype=torch.bool)
+#%%
+tmp = model.JointLandmarksSynthesisKernelModel(kernel_input, kernel_output)
+
 #%%
 itl_estimator = estimator.ITLEstimatorJoint(itl_model, cost_function, lbda, 0, sampler_)
 #%%

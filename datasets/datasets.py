@@ -389,7 +389,8 @@ def kdef_landmarks_id_emo(path_to_landmarks, path_to_emb, inp_emotion='NE', inc_
     test_identities = ["F22", "M19", "M34", "M02", "M27", "F28", "M26"]
 
     # define emotion list, same as in sampler (different abbrv. due to dataset)
-    all_emotions = ['AF', 'AN', 'DI', 'HA', 'SA', 'SU', 'NE']
+    #all_emotions = ['AF', 'AN', 'DI', 'HA', 'SA', 'SU', 'NE']
+    all_emotions = ['AN', 'DI', 'AF', 'HA', 'SA', 'SU', 'NE']
     # find inp emotion index
     inp_emo_idx = all_emotions.index(inp_emotion)
 
