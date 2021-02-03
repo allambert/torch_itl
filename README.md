@@ -5,6 +5,7 @@ Algorithms for solving Infinite Task Learning problems. Currently, we handle the
 
 - Joint Quantile Regression
 - Emotion Transfer with squared loss
+- ITL with general loss provided from the user based on pytorch autodiff
 
 Demos
 =========
