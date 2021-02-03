@@ -38,4 +38,4 @@ If you use this code, please cite the corresponding work:
   title={Emotion Transfer Using Vector-Valued Infinite Task Learning},
   author={Lambert, Alex and Parekh, Sanjeel and Szab{\'o}, Zolt{\'a}n and d’Alch{\'e}-Buc, Florence},
   year={2021}
-}```
+}
