@@ -19,112 +19,58 @@ from torch_itl.sampler import CircularEmoSampler
 from torch_itl.model import DecomposableIdentity
 from torch_itl.kernel import Gaussian
 from torch_itl.estimator import EmoTransfer
+from torch_itl.datasets import get_data_landmarks
 # %%
 # ----------------------------------
 # Reading input/output data
 # ----------------------------------
-dataset = 'KDEF'  # KDEF or Rafd
-inc_emotion = True  # bool to include (0,0) in emotion embedding
-use_facealigner = True  # bool to use aligned faces (for 'Rafd' - set to true)
-
-data_path = os.path.join('../../' + './datasets', dataset +
-                         '_Aligned', dataset + '_LANDMARKS')  # set data path
-data_emb_path = os.path.join(
-    '../../' + './datasets', dataset + '_Aligned', dataset + '_facenet')  # set data path
-
-
-def get_data(dataset, kfold=0):
-    if dataset == 'Rafd':
-        # dirty hack only used to get Rafd speaker ids, not continuously ordered
-        data_csv_path = '/Users/alambert/Recherche/ITL/code/Rafd.csv'
-    affect_net_csv_path = ''  # to be set if theta_type == 'aff'
-    # store all experiments in this output folder
-    output_folder = './LS_Experiments/'
-    if not os.path.exists(output_folder):
-        os.mkdir(output_folder)
-
-    #print('Reading data')
-    if use_facealigner:
-        input_data_version = 'facealigner'
-        if dataset == 'KDEF':
-            from datasets.datasets import kdef_landmarks_facealigner, kdef_landmarks_facenet
-            x_train, y_train, x_test, y_test, train_list, test_list = \
-                kdef_landmarks_facealigner(data_path, inp_emotion='NE',
-                                           inc_emotion=inc_emotion, kfold=kfold)
-        elif dataset == 'Rafd':
-            from datasets.datasets import rafd_landmarks_facealigner
-            x_train, y_train, x_test, y_test, train_list, test_list = \
-                rafd_landmarks_facealigner(data_path, data_csv_path, inp_emotion='angry',
-                                           inc_emotion=inc_emotion, kfold=kfold)
-    else:
-        from datasets.datasets import import_kdef_landmark_synthesis
-        input_data_version = 'aligned2'
-        x_train, y_train, x_test, y_test = import_kdef_landmark_synthesis(
-            dtype=input_data_version)
-    return (y_train, y_test)
-
-
+path_to_rafd = '../../torch_itl/datasets/Rafd_Aligned/Rafd_LANDMARKS'
+path_to_kdef = '../../torch_itl/datasets/KDEF_Aligned/KDEF_LANDMARKS'
 # test of import
-data_train, data_test = get_data(dataset, 10)
+data_train, data_test = get_data_landmarks('KDEF', path_to_kdef)
 n, m, nf = data_train.shape
-print('data dimensions', n, m, nf)
-
+print('Testing import, data dimensions:', n, m, nf)
 # %%
 # ----------------------------------
 # Defining our model
 # ----------------------------------
-
+print('Defining the model')
 # define Landmarks kernel
 gamma_inp = 0.07
 kernel_input = Gaussian(gamma_inp)
-
 # define emotion kernel
 gamma_out = 0.4
 kernel_output = Gaussian(gamma_out)
-
 # define functional model
 model = DecomposableIdentity(kernel_input, kernel_output, nf)
-
 # define emotion sampler
-sampler = CircularEmoSampler(dataset=dataset)
-
+sampler = CircularEmoSampler()
 # define regularization
 lbda = 2e-5
-
-# defining the model
-est = EmoTransfer(model, lbda,  sampler)
-
+# define the emotion transfer estimator
+est = EmoTransfer(model, lbda,  sampler, inp_emotion='joint')
 # %%
 # ----------------------------------
 # Fitting fewer coefficients with non invertible matrix A -- KDEF
 # ----------------------------------
+print('Computing losses KDEF')
 losses_kdef = torch.zeros(10, nf)
 for kfold in range(10):
-    data_train, data_test = get_data(dataset, kfold)
+    data_train, data_test = get_data_landmarks('KDEF', path_to_kdef, kfold=kfold)
     for r in range(nf):
         est.fit_dim_red(data_train, r+1)
         losses_kdef[kfold, r] = est.risk(data_test)
-
-
 # %%
 # ----------------------------------
 # Fitting fewer coefficients with non invertible matrix A -- Rafd
 # ----------------------------------
-dataset = 'Rafd'
-est.sampler.dataset = dataset
-data_path = os.path.join('../../' + './datasets', dataset +
-                         '_Aligned', dataset + '_LANDMARKS')  # set data path
-data_emb_path = os.path.join(
-    '../../' + './datasets', dataset + '_Aligned', dataset + '_facenet')  # set data path
-
+print('Computing losses RaFD')
 losses_rafd = torch.zeros(10, nf)
 for kfold in range(1,11):
-    data_train, data_test = get_data(dataset, kfold)
+    data_train, data_test = get_data_landmarks('RaFD', path_to_rafd, kfold=kfold)
     for r in range(nf):
         est.fit_dim_red(data_train, r+1)
         losses_rafd[kfold-1, r] = est.risk(data_test)
-
-
 # %%
 # ----------------------------------
 # Saving the results

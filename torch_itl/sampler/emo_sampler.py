@@ -13,19 +13,11 @@ emo_va = {'Neutral': [0, 0],
 
 class CircularEmoSampler(object):
 
-    def __init__(self, dataset, inp_emotion='Neutral', inc_emotion=True):
-        self.dataset = dataset
+    def __init__(self, inp_emotion='Neutral', inc_emotion=True):
         self.inp_emotion = inp_emotion
         self.inc_emotion = inc_emotion
-
-        if dataset == 'KDEF':
-            self.emo_list = ['Fear', 'Anger', 'Disgust',
-                             'Happy', 'Sad', 'Surprise', 'Neutral']
-        elif dataset == 'Rafd':
-            self.emo_list = ['Anger', 'Disgust', 'Fear',
-                             'Happy', 'Sad', 'Surprise', 'Neutral']
-        else:
-            raise Exception('Unexpected dataset')
+        self.emo_list = ['Anger', 'Disgust', 'Fear',
+                         'Happy', 'Sad', 'Surprise', 'Neutral']
 
     def sample(self):
         emo_emb = []
