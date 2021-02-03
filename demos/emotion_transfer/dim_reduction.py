@@ -1,7 +1,7 @@
 # This script illustrate that we can reduce the dimensionality of our model
 # when using vITL by choosing A to be a non-invertible well chosen
 # matrix, built upon the empirical covariance matrix
-# Runtime ~25 min on laptop
+# Runtime ~1h on laptop
 # ----------------------------------
 # Imports
 # ----------------------------------

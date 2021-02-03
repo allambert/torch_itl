@@ -1,6 +1,5 @@
 import os
 import torch
-import pandas as pd
 import numpy as np
 np.random.seed(seed=21)
 import random
