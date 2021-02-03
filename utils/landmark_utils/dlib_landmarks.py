@@ -5,7 +5,7 @@ import glob
 import matplotlib.pyplot as plt
 from PIL import Image, ImageDraw
 
-if len(sys.argv) != 5:
+if len(sys.argv) != 4:
     print(
         "Give the path to the trained shape predictor model as the first "
         "argument and then the directory containing the facial images.\n"
@@ -19,7 +19,7 @@ if len(sys.argv) != 5:
 predictor_path = sys.argv[1]
 faces_paths_file = sys.argv[2]
 output_folder = sys.argv[3]
-draw_bool = sys.argv[4]
+draw_bool = False
 print(draw_bool)
 
 if not os.path.exists(output_folder):

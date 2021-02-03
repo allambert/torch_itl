@@ -1,5 +1,6 @@
 # import the necessary packages
 from collections import OrderedDict
+import subprocess
 import numpy as np
 import cv2
 import os
@@ -96,115 +97,98 @@ class FaceAligner:
 		# return the aligned face and lnd
 		return output, np.squeeze(output_lnd)
 
-#%%
+
+def list_and_landmarks(dataset, data_dir, lnd_dir, paths_txt, predictor_path):
+	img_list = []
+	if dataset == 'KDEF':
+		for dir, subdir, filenames in os.walk(data_dir):
+			for f in filenames:
+				if f.endswith('S.JPG'):
+					img_list.append(os.path.join(dir, f))
+	elif dataset == 'Rafd':
+		for img in sorted(os.listdir(data_dir)):
+			print(img)
+			if img.split('.')[-1].lower() == 'jpg':
+				fname_part = img.split('.')[0].split('_')
+				print(fname_part)
+				if fname_part[5] == 'frontal' and fname_part[0][4:] == '090':
+					img_list.append(os.path.join(data_dir, img))
+
+	# 	os.listdir(data_dir)
+	with open(paths_txt, 'w') as f:
+		for fpath in img_list:
+			f.write('{}\n'.format(fpath))
+
+	# get landmarks from dlib
+
+	if not os.path.exists(predictor_path):
+		print('Landmarks predictor does not exist.')
+	else:
+		dlib_cmd = ' '.join(['python dlib_landmarks.py', predictor_path, paths_txt, lnd_dir])
+		with subprocess.Popen(dlib_cmd, shell=True, stdout=subprocess.PIPE) as cmd:
+			for line in cmd.stdout:
+				print(line)
+	return img_list
+
+
+def data_preprocess(dataset, data_dir, dest_base_dir, predictor_path):
+
+	# create file list, compute landmarks and return with list for alignment
+	lnd_dir = os.path.join(dest_base_dir, dataset + 'LANDMARKS')
+	paths_txt = os.path.join(dest_base_dir, dataset + '_frontal_list.txt')
+	if not os.path.exists(lnd_dir):
+		os.makedirs(lnd_dir)
+	img_list = list_and_landmarks(dataset, data_dir, lnd_dir, paths_txt, predictor_path)
+
+	# init aligner
+	fa = FaceAligner(desiredFaceWidth=128)
+
+	# destination directory structure
+	dest_parent_folder_path = os.path.join(dest_base_dir, dataset + '_Aligned')
+	dest_sub_folder_datapath = os.path.join(dest_parent_folder_path, dataset)
+	dest_sub_folder_lndpath = os.path.join(dest_parent_folder_path, dataset + '_LANDMARKS')
+
+	if not os.path.exists(dest_parent_folder_path):
+		os.makedirs(dest_sub_folder_datapath)
+		os.makedirs(dest_sub_folder_lndpath)
+
+	for index, row in enumerate(img_list):
+
+		# read each image and landmarks
+		# ----file paths
+		im_path = row
+		file_name = row.split('/')[-1].split('.')[0]
+		lnd_file_path = os.path.join(lnd_dir, file_name + '.txt')
+
+		# ----read_image
+		image = cv2.imread(im_path)
+
+		# get landmarks
+		points = np.loadtxt(lnd_file_path).reshape(68, 2)
+
+		# compute alignment
+		image_aligned, points_aligned = fa.align(image, points)
+
+		# store back in a folder structure similar to Rafd
+
+		row_impath = os.path.join(dest_sub_folder_datapath, file_name + '.JPG')
+		row_lndpath = os.path.join(dest_sub_folder_lndpath, file_name + '.txt')
+
+		cv2.imwrite(row_impath, image_aligned)
+		with open(row_lndpath, 'w') as file:
+			for idx_l in range(68):
+				file.write("{} {}\n".format(points_aligned[idx_l, 0], points_aligned[idx_l, 1]))
+
 
 if __name__ == "__main__":
+	predictor_path = 'shape_predictor_68_face_landmarks.dat'
 
-	dataset = 'rafd'
-	if dataset == 'try':
-		fa = FaceAligner()
-		im_path = '/home/mlpboon/Downloads/KDEF_and_AKDEF/KDEF/AF01/AF01NES.JPG'
-		lnd_path = '/home/mlpboon/post-doc/repositories/torch_itl/datasets/KDEF/KDEF_LANDMARKS/AF01NES.txt'
-		im = cv2.imread(im_path)
-		points = np.loadtxt(lnd_path).reshape(68, 2)
-		output, lnd = fa.align(im, points)
-		for l in range(lnd.shape[0]):
-			cv2.circle(output, (int(lnd[l,0]), int(lnd[l,1])), 2, (0, 255, 0), -1)
-		cv2.imwrite('aligned_face.jpg', output)
-	elif dataset == 'kdef':
-		# init aligner
+	dataset = 'KDEF'
+	data_dir = '/home/mlpboon/Downloads/KDEF_and_AKDEF/KDEF'
+	dest_dir = 'release_code_test'
 
-		fa = FaceAligner(desiredFaceWidth=128)
+	# dataset = 'Rafd'
+	# data_dir = '/home/mlpboon/Downloads/Rafd'
+	# dest_dir = 'release_code_test'
 
-		# get source info
-		# Decompose the path into prefix and suffix so that it works independently of the user
-		prefix_torch_itl = '/Users/alambert/Recherche/ITL/code/torch_itl'
-		prefix_kdef_data = '/Users/alambert/Recherche/ITL/code/KDEF_AND_AKDEF/'
-		def shorten_path(path):
-			return path[39:]
-		source_data_csv = prefix_kdef_data + 'KDEF.csv'
-		df = pd.read_csv(source_data_csv)
-		df['file_path'] = df['file_path'].apply(shorten_path)
-		df_filter = df.loc[df['profile'] == 'S']
-
-		lnd_dir = prefix_torch_itl + '/datasets/KDEF/KDEF_LANDMARKS'
-
-		# destination directory structure
-		dest_base_path = '../../datasets'
-		dest_parent_folder_path = os.path.join(dest_base_path, 'KDEF_Aligned')
-		dest_sub_folder_datapath = os.path.join(dest_parent_folder_path, 'KDEF')
-		dest_sub_folder_lndpath = os.path.join(dest_parent_folder_path, 'KDEF_LANDMARKS')
-
-		if not os.path.exists(dest_parent_folder_path):
-			os.makedirs(dest_sub_folder_datapath)
-			os.makedirs(dest_sub_folder_lndpath)
-
-		for index, row in df_filter.iterrows():
-
-			# read each image and landmarks
-			# ----file paths
-			im_path = prefix_kdef_data + row['file_path']
-			file_name = (prefix_kdef_data + row['file_path']).split('/')[-1].split('.')[0]
-			lnd_file_path = os.path.join(lnd_dir, file_name + '.txt')
-			# ----read_image
-			image = cv2.imread(im_path)
-			# get landmarks
-			points = np.loadtxt(lnd_file_path).reshape(68, 2)
-			# compute alignment
-			image_aligned, points_aligned = fa.align(image, points)
-
-			# store back in a folder structure similar to KDEF
-			row_datafolder = os.path.join(dest_sub_folder_datapath, row['id'])
-			row_impath = os.path.join(row_datafolder, file_name + '.JPG')
-			row_lndpath = os.path.join(dest_sub_folder_lndpath, file_name + '.txt')
-			if not os.path.exists(row_datafolder):
-				os.mkdir(row_datafolder)
-			cv2.imwrite(row_impath, image_aligned)
-			with open(row_lndpath, 'w') as file:
-				for idx_l in range(68):
-					file.write("{} {}\n".format(points_aligned[idx_l, 0], points_aligned[idx_l, 1]))
-	elif dataset == 'rafd':
-		# init face aligner
-		fa = FaceAligner(desiredFaceWidth=128)
-
-		# set path prefix
-		prefix_torch_itl = '/home/mlpboon/post-doc/repositories/torch_itl'
-		prefix_rafd_data = '/home/mlpboon/Downloads/'
-		lnd_dir = os.path.join(prefix_torch_itl , 'datasets/Rafd/Rafd_LANDMARKS')
-		# get rafd csv and frontal face list
-		df = pd.read_csv(os.path.join(prefix_rafd_data, 'Rafd/Rafd.csv'))
-		df_filter = df.loc[(df['gaze'] == 'frontal') &
-										(df['profile'] == 90)]
-		# destination directory structure
-		dest_base_path = '../../datasets'
-		dest_parent_folder_path = os.path.join(dest_base_path, 'Rafd_Aligned')
-		dest_sub_folder_datapath = os.path.join(dest_parent_folder_path, 'Rafd')
-		dest_sub_folder_lndpath = os.path.join(dest_parent_folder_path, 'Rafd_LANDMARKS')
-
-		if not os.path.exists(dest_parent_folder_path):
-			os.makedirs(dest_sub_folder_datapath)
-			os.makedirs(dest_sub_folder_lndpath)
-
-		for index, row in df_filter.iterrows():
-
-			# read each image and landmarks
-			# ----file paths
-			im_path = prefix_rafd_data + row['file_path']
-			file_name = row['file_path'].split('/')[-1].split('.')[0]
-			lnd_file_path = os.path.join(lnd_dir, file_name + '.txt')
-			# ----read_image
-			image = cv2.imread(im_path)
-			# get landmarks
-			points = np.loadtxt(lnd_file_path).reshape(68, 2)
-			# compute alignment
-			image_aligned, points_aligned = fa.align(image, points)
-
-			# store back in a folder structure similar to Rafd
-
-			row_impath = os.path.join(dest_sub_folder_datapath, file_name + '.JPG')
-			row_lndpath = os.path.join(dest_sub_folder_lndpath, file_name + '.txt')
-
-			cv2.imwrite(row_impath, image_aligned)
-			with open(row_lndpath, 'w') as file:
-				for idx_l in range(68):
-					file.write("{} {}\n".format(points_aligned[idx_l, 0], points_aligned[idx_l, 1]))
+	data_preprocess(dataset, data_dir, dest_dir, predictor_path)
