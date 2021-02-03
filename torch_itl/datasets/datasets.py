@@ -1,6 +1,5 @@
 import os
 import torch
-import pandas as pd
 import numpy as np
 np.random.seed(seed=21)
 import random
@@ -68,7 +67,7 @@ def kdef_landmarks_facealigner(path_to_landmarks, inp_emotion='NE', inc_emotion=
     Parameters
     ----------
     path_to_landmarks: str
-                       path to folder cotaining landmarks
+                       path to folder containing landmarks
     inp_emotion: str
                  the input emotion for single model
     inc_emotion: bool
@@ -260,6 +259,36 @@ def rafd_landmarks_facealigner(path_to_landmarks, inp_emotion='neutral', inc_emo
            torch.from_numpy(test_input).float(), torch.from_numpy(test_output).float(), \
            train_list, test_list
 
+
+def get_data_landmarks(dataset, path_to_landmarks, kfold=0, random_seed=21):
+    '''Loader for both KDEF and RaFD datasets
+    Loads all available data
+    Parameters
+    ----------
+    dataset: str
+        'KDEF' or 'RaFD'
+    path_to_landmarks: str
+                       path to folder cotaining landmarks
+    kfold: int
+           which split to compute data for, 0 is a preselected split, start from 1
+    random_seed: set to 21 for reproducibility
+
+    Returns
+    -------
+    data_train, data_test
+    '''
+    if dataset=='KDEF':
+        x_train, y_train, x_test, y_test, train_list, test_list = kdef_landmarks_facealigner(
+            path_to_landmarks, inp_emotion='AN', inc_emotion=True, kfold=kfold, random_seed=random_seed)
+
+    elif dataset=='RaFD':
+        x_train, y_train, x_test, y_test, train_list, test_list = rafd_landmarks_facealigner(
+            path_to_landmarks, inp_emotion='angry', inc_emotion=True, kfold=kfold, random_seed=random_seed)
+
+    else:
+        raise Exception('Unknown dataset')
+
+    return y_train, y_test
 
 def import_affectnet_va_embedding(affect_net_csv_path):
     if not affect_net_csv_path == '':
