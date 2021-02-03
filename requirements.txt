@@ -1,0 +1,4 @@
+# Requirements for building torch_itl
+
+torch >= 1.4.0
+scipy >= 1.4.1
