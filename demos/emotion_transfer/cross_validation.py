@@ -15,6 +15,8 @@ from torch_itl.sampler import CircularEmoSampler
 from torch_itl.model import DecomposableIdentity
 from torch_itl.kernel import Gaussian
 from torch_itl.estimator import EmoTransfer
+import torch_itl.datasets as datasets
+
 # %%
 # ----------------------------------
 # Reading input/output data
@@ -23,9 +25,9 @@ dataset = 'KDEF'  # KDEF or Rafd
 inc_emotion = True  # bool to include (0,0) in emotion embedding
 use_facealigner = True  # bool to use aligned faces (for 'Rafd' - set to true)
 
-data_path = os.path.join('../../datasets', dataset +
+data_path = os.path.join('../../torch_itl/datasets', dataset +
                          '_Aligned', dataset + '_LANDMARKS')  # set data path
-data_emb_path = os.path.join('../../datasets', dataset +
+data_emb_path = os.path.join('../../torch_itl/datasets', dataset +
                               '_Aligned', dataset + '_facenet')  # set data path
 
 
@@ -165,10 +167,10 @@ torch.save(gamma_out_argmin_kdef, 'KDEF_gamma_out.pt')
 dataset = 'Rafd'
 est.sampler.dataset = dataset # KDEF or Rafd
 
-data_path = os.path.join('../../' + './datasets', dataset +
+data_path = os.path.join('../../torch_itl/datasets', dataset +
                          '_Aligned', dataset + '_LANDMARKS')  # set data path
 data_emb_path = os.path.join(
-    '../../' + './datasets', dataset + '_Aligned', dataset + '_facenet')
+    '../../torch_itl/datasets', dataset + '_Aligned', dataset + '_facenet')
 input_type_list = [i for i in range(m)] + ['joint']
 n_lbda = 10
 n_gamma_inp = 10
