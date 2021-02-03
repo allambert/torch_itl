@@ -12,7 +12,7 @@ install_reqs = parse_requirements('./requirements.txt')
 reqs = [str(ir) for ir in install_reqs]
 
 setup(name='torch_itl',
-      version='0.1',
+      version='0.1dev',
       description='pytorch compatible integral loss minimization',
       author='Alex Lambert',
       author_email='alex.lambert@protonmail.com',
