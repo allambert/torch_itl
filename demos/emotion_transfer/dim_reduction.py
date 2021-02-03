@@ -1,21 +1,18 @@
 # This script illustrate that we can reduce the dimensionality of our model
 # when using vITL by choosing A to be a non-invertible well chosen
 # matrix, built upon the empirical covariance matrix
-# Runtime ~15 min on laptop
+# Runtime ~25 min on laptop
 # ----------------------------------
 # Imports
 # ----------------------------------
 import os
-import json
-import time
 import torch
 import matplotlib.pyplot as plt
 import sys
 import importlib
 
 if importlib.util.find_spec('torch_itl') is None:
-    path_to_lib =!pwd
-    path_to_lib = path_to_lib[0][:-23]
+    path_to_lib = os.getcwd()[:-23]
     sys.path.append(path_to_lib)
 
 from torch_itl.sampler import CircularEmoSampler

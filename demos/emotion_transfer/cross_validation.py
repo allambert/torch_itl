@@ -2,16 +2,13 @@
 # Imports
 # ----------------------------------
 import os
-import json
-import time
 import torch
 import matplotlib.pyplot as plt
 import sys
 import importlib
 
 if importlib.util.find_spec('torch_itl') is None:
-    path_to_lib =!pwd
-    path_to_lib = path_to_lib[0][:-23]
+    path_to_lib = os.getcwd()[:-23]
     sys.path.append(path_to_lib)
 
 from torch_itl.sampler import CircularEmoSampler
