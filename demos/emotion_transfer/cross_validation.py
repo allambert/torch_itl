@@ -91,18 +91,18 @@ sampler = CircularEmoSampler(dataset=dataset)
 lbda = 2e-5
 #%%
 #
-est = EmoTransfer(model, lbda,  sampler, input_type='joint')
+est = EmoTransfer(model, lbda,  sampler, inp_emotion='joint')
 #%%
 # ----------------------------------
 # Cross Validation Loop KDEF
 # ----------------------------------
 input_type_list = [i for i in range(m)] + ['joint']
-n_lbda = 1
-n_gamma_inp = 1
-n_gamma_out  = 1
-lbda_list = torch.logspace(-6,-4, n_lbda)
-gamma_inp_list = torch.logspace(-1.6,-1., n_gamma_inp)
-gamma_out_list = torch.logspace(-0.8,0, n_gamma_out)
+n_lbda = 10
+n_gamma_inp = 10
+n_gamma_out  = 10
+lbda_list = torch.logspace(-6,-3, n_lbda)
+gamma_inp_list = torch.logspace(-1.6,-0.5, n_gamma_inp)
+gamma_out_list = torch.logspace(-1.5,0, n_gamma_out)
 risk_kdef = torch.zeros(m+1, 10, 6, n_lbda, n_gamma_inp, n_gamma_out)
 for n_input, input_type in enumerate(input_type_list):
     est.input_type = input_type
@@ -173,14 +173,12 @@ data_path = os.path.join('../../' + './datasets', dataset +
 data_emb_path = os.path.join(
     '../../' + './datasets', dataset + '_Aligned', dataset + '_facenet')
 input_type_list = [i for i in range(m)] + ['joint']
-n_lbda = 1
-n_gamma_inp = 1
-n_gamma_out  = 1
-lbda_list = torch.logspace(-6,-4, n_lbda)
-lbda_list
-gamma_inp_list = torch.logspace(-1.6,-1., n_gamma_inp)
-gamma_inp
-gamma_out_list = torch.logspace(-0.8,0, n_gamma_out)
+n_lbda = 10
+n_gamma_inp = 10
+n_gamma_out  = 10
+lbda_list = torch.logspace(-6,-3, n_lbda)
+gamma_inp_list = torch.logspace(-1.6,-0.5, n_gamma_inp)
+gamma_out_list = torch.logspace(-1.5,0, n_gamma_out)
 risk_rafd = torch.zeros(m+1, 10, 10, n_lbda, n_gamma_inp, n_gamma_out)
 for n_input, input_type in enumerate(input_type_list):
     est.input_type = input_type
