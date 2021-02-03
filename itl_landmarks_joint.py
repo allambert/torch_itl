@@ -29,11 +29,11 @@ if use_facealigner:
     if dataset == 'KDEF':
         from datasets.datasets import kdef_landmarks_facealigner
         x_train, y_train, x_test, y_test, train_list, test_list = \
-            kdef_landmarks_facealigner(data_path, inc_neutral=inc_neutral)
+            kdef_landmarks_facealigner(data_path, inc_emotion=inc_neutral, kfold=1)
     elif dataset == 'Rafd':
         from datasets.datasets import rafd_landmarks_facealigner
         x_train, y_train, x_test, y_test, train_list, test_list = \
-            rafd_landmarks_facealigner(data_path, data_csv_path, inc_neutral=inc_neutral)
+            rafd_landmarks_facealigner(data_path, data_csv_path, inc_emotion=inc_neutral)
 else:
     from datasets.datasets import import_kdef_landmark_synthesis
     input_data_version = 'aligned2'
@@ -52,9 +52,9 @@ print('data dimensions', n, m, nf)
 #%%
 kernel_input_learnable = False
 output_var_dependence = False
-save_model = True
-plot_fig = True
-save_pred = True
+save_model = False
+plot_fig = False
+save_pred = False
 
 if kernel_input_learnable:
     NE = 10  # num epochs overall
@@ -80,7 +80,7 @@ if kernel_input_learnable:
 else:
     NE = 1
     ne_fa = 50
-    gamma_inp = 3.0
+    gamma_inp = 3
     kernel_input = kernel.Gaussian(gamma_inp)
 
 # define emotion kernel
@@ -105,7 +105,7 @@ itl_model = model.JointLandmarksSynthesisKernelModel(kernel_input, kernel_output
 
 # define cost function
 cost_function = cost.squared_norm_emotions
-lbda_reg = 0.001
+lbda_reg = 0.001/7
 lbda_id = 0
 # define emotion sampler
 if theta_type == 'aff':
@@ -113,11 +113,11 @@ if theta_type == 'aff':
     aff_emo_dict = import_affectnet_va_embedding(affect_net_csv_path)
 
     sampler_ = sampler.CircularSampler(data=dataset+theta_type,
-                                       inc_neutral=inc_neutral,
+                                       inc_emotion=inc_neutral,
                                        sample_dict=aff_emo_dict)
 elif theta_type == '':
     sampler_ = sampler.CircularSampler(data=dataset,
-                                       inc_neutral=inc_neutral)
+                                       inc_emotion=inc_neutral)
 sampler_.m = m
 
 itl_estimator = estimator.ITLEstimatorJoint(itl_model,
@@ -130,16 +130,16 @@ itl_estimator = estimator.ITLEstimatorJoint(itl_model,
 # Training
 # ----------------------------------
 
-for ne in range(1):
-    itl_estimator.fit_alpha(y_train, n_epochs=2,
-                        lr=lr_alpha, line_search_fn='strong_wolfe', warm_start=True)
-
-    print(itl_estimator.losses)
-    #itl_estimator.clear_memory()
-    if kernel_input_learnable:
-        itl_estimator.fit_kernel_input(x_train, y_train, n_epochs=ne_fki)
-        print(itl_estimator.model.kernel_input.losses)
-        itl_estimator.model.kernel_input.clear_memory()
+# for ne in range(1):
+#     itl_estimator.fit_alpha(y_train, n_epochs=2,
+#                         lr=lr_alpha, line_search_fn='strong_wolfe', warm_start=True)
+#
+#     print(itl_estimator.losses)
+#     #itl_estimator.clear_memory()
+#     if kernel_input_learnable:
+#         itl_estimator.fit_kernel_input(x_train, y_train, n_epochs=ne_fki)
+#         print(itl_estimator.model.kernel_input.losses)
+#         itl_estimator.model.kernel_input.clear_memory()
 
 #%%
 
@@ -226,7 +226,7 @@ print("done")
 # plt.plot(itl_estimator.losses)
 # plt.show()
 # print("Empirical Risk Train:", itl_estimator.cost(y_train_joint, pred_train, sampler_.sample(m)))
-itl_estimator.cost(y_test_joint, pred_test1, sampler_.sample(m)).mean(axis=1)
+print(itl_estimator.cost(y_test_joint, pred_test1, sampler_.sample(m)).mean(axis=1))
 print(itl_estimator.training_risk())
 y_test_joint.shape
 print("Empirical Risk Test:", itl_estimator.cost(y_test_joint, pred_test1, sampler_.sample(m)))

@@ -14,29 +14,29 @@ config.add_argument("--joint", action="store_true",
 args = config.parse_args()
 
 device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-MODEL_PATH = args.model_path
-# MODEL_PATH = './LndExperiments/KDEF_bs16_e10_20201117-181507'
+#MODEL_PATH = args.model_path
+#MODEL_PATH = './LndExperiments/KDEF_bs16_e10_20201117-181507'
 # MODEL_PATH  = './LndExperiments/Rafd_bs16_e10_20201118-055249'
-#MODEL_PATH = './LndExperiments/RafdwoCON_bs16_e10_20201203-133925'
+MODEL_PATH = './LndExperiments/RafdwoCON_bs16_e10_20201203-133925'
 #MODEL_PATH  = './LndExperiments/Aff_bs16_e10_20210103-213431'
 
-dataset = args.dataset #'KDEF'
-joint_compute = args.joint
+dataset = 'KDEF' #args.dataset #'KDEF'
+joint_compute = False #args.joint
 batch_size = 2
 input_size = 224
 
 if dataset == 'KDEF':
     num_classes = 7
-    data_dir = args.data_dir  # './EM_Classification_Exp/LndPredJointInpEmoWise/NE'
+    #data_dir = args.data_dir  # './EM_Classification_Exp/LndPredJointInpEmoWise/NE'
     # data_dir = './LndPredKDEF_itl_model_20201118-134545'
     #data_dir = './KDEF_LandmarkClassification_rafd/train'
     #data_dir = './KDEF_LandmarkClassification_rafd/test'
-    # data_dir = './EM_Classification_Exp/LndPredJoint'
+    data_dir = './EM_Classification_Exp/starGAN_50kdec25k'
 elif dataset == 'Rafd':
     num_classes = 7 #making wo CON
     data_dir = args.data_dir #'./LndPredRafd_itl_model_20201118-134437'
     # data_dir = './Rafd_LandmarkClassification/train'
-    # data_dir = './Rafd_LandmarkClassification/test'
+    data_dir = './RafdwoCON_LandmarkClassification/test'
     # data_dir = './RafdwoCON_LandmarkClassification_kdef/test'
 elif dataset == 'RafdwoCON':
     num_classes = 7
@@ -107,6 +107,8 @@ with torch.no_grad():
         labels = labels.to(device)
         outputs = emo_model_ft(inputs)
         _, predicted = torch.max(outputs.data, 1)
+        if 'neutral' in paths[0]:
+            print(paths[0], outputs[0])
         # print(outputs)
         total += labels.size(0)
         correct += (predicted == labels).sum().item()

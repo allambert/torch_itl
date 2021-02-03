@@ -90,11 +90,15 @@ class FaceAligner:
 
 		# apply the affine transformation
 		(w, h) = (self.desiredFaceWidth, self.desiredFaceHeight)
-		output = cv2.warpAffine(image, M, (w, h),
-			flags=cv2.INTER_CUBIC)
 		output_lnd = cv2.transform(shape[np.newaxis], M)
-		# return the aligned face and lnd
-		return output, np.squeeze(output_lnd)
+		if image is not None:
+			output = cv2.warpAffine(image, M, (w, h),
+				flags=cv2.INTER_CUBIC)
+
+			# return the aligned face and lnd
+			return output, np.squeeze(output_lnd)
+		else:
+			return np.squeeze(output_lnd)
 
 #%%
 

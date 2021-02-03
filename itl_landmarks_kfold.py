@@ -2,6 +2,7 @@ import os
 import subprocess
 import json
 import time
+import torch
 
 
 def plot_box(plot_dict, dataset, itl_type, itl_out_folder):
@@ -27,7 +28,7 @@ def plot_box(plot_dict, dataset, itl_type, itl_out_folder):
 
 
 dataset = 'Rafd'
-itl_type = 'single'
+itl_type = 'joint'
 
 ClassificationBaseFolder = './utils/landmark_utils/Classification'
 
@@ -48,8 +49,20 @@ if dataset == 'KDEF':
         model_path = os.path.join(ClassificationBaseFolder,
                                   './LndExperiments/KDEF_bs16_e10_20201117-181507')
     elif dirname_protocol == 'Rafd':
+        #model_path = os.path.join(ClassificationBaseFolder,
+        #                          './LndExperiments/RafdwoCON_bs16_e10_20201203-133925')
         model_path = os.path.join(ClassificationBaseFolder,
-                                  './LndExperiments/RafdwoCON_bs16_e10_20201203-133925')
+                                  './LndExperiments/RafdwoCON_bs16_e10_Full_20210130-094559')
+
+    # CV optim values
+    if itl_type == 'single':
+        gammas_input = torch.load('./KDEF_single_emotion_hyperparameters/KDEF_single_emotion_gamma_inp.pt')
+        gammas_output = torch.load('./KDEF_single_emotion_hyperparameters/KDEF_single_emotion_gamma_out.pt')
+        lbdas = torch.load('./KDEF_single_emotion_hyperparameters/KDEF_single_emotion_lbdas.pt')
+    elif itl_type == 'joint':
+        gammas_input = torch.load('./joint_hyperparamas_KDEF/KDEF_joint_emotion_gamma_inp.pt')
+        gammas_output = torch.load('./joint_hyperparamas_KDEF/KDEF_joint_emotion_gamma_out.pt')
+        lbdas = torch.load('./joint_hyperparamas_KDEF/KDEF_joint_emotion_lbdas.pt')
 
 elif dataset == 'Rafd':
     all_emotions = ['angry', 'disgusted', 'fearful', 'happy', 'sad', 'surprised', 'neutral']
@@ -68,20 +81,38 @@ elif dataset == 'Rafd':
         model_path = os.path.join(ClassificationBaseFolder,
                                   './LndExperiments/RafdwoCON_bs16_e10_20201203-133925')
     elif dirname_protocol == 'KDEF':
+        #model_path = os.path.join(ClassificationBaseFolder,
+        #                          './LndExperiments/KDEF_bs16_e10_20201117-181507')
         model_path = os.path.join(ClassificationBaseFolder,
-                                  './LndExperiments/KDEF_bs16_e10_20201117-181507')
+                                  './LndExperiments/KDEF_bs16_e10_Full_20210130-094817')
+
+    if itl_type == 'single':
+        gammas_input = torch.load('./final_hyp_values_rafd/Rafd_single_emotion_gamma_inp.pt')
+        gammas_output = torch.load('./final_hyp_values_rafd/Rafd_single_emotion_gamma_out.pt')
+        lbdas = torch.load('./final_hyp_values_rafd/Rafd_single_emotion_lbdas.pt')
+    elif itl_type == 'joint':
+        gammas_input = torch.load('./final_hyp_values_rafd/Rafd_joint_emotion_gamma_inp.pt')
+        gammas_output = torch.load('./final_hyp_values_rafd/Rafd_joint_emotion_gamma_out.pt')
+        lbdas = torch.load('./final_hyp_values_rafd/Rafd_joint_emotion_lbdas.pt')
 
 
 em_test_costs = {em: {'cost': [], 'accuracy': []} for em in all_emotions}
 start_time = time.time()
 if itl_type == 'single':
-    for em in all_emotions:
+    for i_em, em in enumerate(all_emotions):
         for fold in range(1, num_fold+1):
+            gamma_x = gammas_input[fold-1, i_em].item()
+            gamma_t = gammas_output[fold-1, i_em].item()
+            lbda = lbdas[fold-1, i_em].item()
+            print(gamma_x, gamma_t, lbda)
             itl_cmd = ' '.join(['python itl_one_emotion_argparse.py',
                                 '--dataset '+dataset,
                                 '--input_emotion '+em,
                                 '--inc_emotion',
                                 '--kfold '+str(fold),
+                                '--gamma_x '+str(gamma_x),
+                                '--gamma_t '+str(gamma_t),
+                                '--lbda '+str(lbda),
                                 '--save_pred',
                                 '--save_model',
                                 '--output_folder '+itl_out_folder])
@@ -107,7 +138,7 @@ if itl_type == 'single':
                     print(line)
 
             # Do classification
-            classify_itl_cmd = ' '.join(['python ./utils/landmark_utils/Classification/test_lnd.py',
+            classify_itl_cmd = ' '.join(['python ./utils/landmark_utils/Classification/test_lnd_argparse.py',
                                          '--model_path ' + model_path,
                                          '--dataset ' + dataset,
                                          '--data_dir ' + format_itl_out])
@@ -119,11 +150,18 @@ if itl_type == 'single':
 elif itl_type == 'joint':
     for fold in range(1, num_fold + 1):
         print(fold)
+        gamma_x = gammas_input[fold - 1].item()
+        gamma_t = gammas_output[fold - 1].item()
+        lbda = lbdas[fold - 1].item()
+        print(gamma_x, gamma_t, lbda)
         count = 0
         itl_cmd = ' '.join(['python itl_joint_argparse.py',
                             '--dataset ' + dataset,
                             '--inc_emotion',
                             '--kfold ' + str(fold),
+                            '--gamma_x ' + str(gamma_x),
+                            '--gamma_t ' + str(gamma_t),
+                            '--lbda ' + str(lbda),
                             '--save_pred',
                             '--save_model',
                             '--output_folder '+itl_out_folder])
@@ -153,7 +191,7 @@ elif itl_type == 'joint':
                 print(line)
 
         # Do classification
-        classify_itl_cmd = ' '.join(['python ./utils/landmark_utils/Classification/test_lnd.py',
+        classify_itl_cmd = ' '.join(['python ./utils/landmark_utils/Classification/test_lnd_argparse.py',
                                      '--model_path ' + model_path,
                                      '--dataset ' + dataset,
                                      '--data_dir ' + format_itl_out,

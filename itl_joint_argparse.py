@@ -21,6 +21,9 @@ config.add_argument("--save_pred", action="store_true",
 config.add_argument("--output_folder", type=str, help="output folder")
 config.add_argument("--kfold", type=int, help="train for a specific data fold, "
                                               "pass 0 for orig setting")
+config.add_argument("--gamma_x", type=float, help="gamma inp")
+config.add_argument("--gamma_t", type=float, help="gamma out")
+config.add_argument("--lbda", type=float, help="reg val")
 args = config.parse_args()
 
 
@@ -101,11 +104,11 @@ if kernel_input_learnable:
 else:
     NE = 1
     ne_fa = 50
-    gamma_inp = 3.0
+    gamma_inp = args.gamma_x #3.0
     kernel_input = kernel.Gaussian(gamma_inp)
 
 # define emotion kernel
-gamma_out = 1.0
+gamma_out = args.gamma_t #1.0
 kernel_output = kernel.Gaussian(gamma_out)
 
 # Define PSD matrix on output variables
@@ -126,7 +129,7 @@ itl_model = model.JointLandmarksSynthesisKernelModel(kernel_input, kernel_output
 
 # define cost function
 cost_function = cost.squared_norm_emotions
-lbda_reg = 0.001
+lbda_reg = args.lbda #0.001
 lbda_id = 0
 # define emotion sampler
 if theta_type == 'aff':

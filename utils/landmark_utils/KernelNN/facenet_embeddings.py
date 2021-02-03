@@ -20,6 +20,9 @@ def fixed_image_standardization(image_tensor):
     return processed_tensor
 
 
+
+
+
 if __name__ == "__main__":
 
     dataset = 'KDEF'

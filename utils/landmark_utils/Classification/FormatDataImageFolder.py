@@ -47,13 +47,79 @@ class EdgeMap(object):
         # return image.transpose(2, 0, 1) / 255.0
 
 
+def FormatStarGanLndFolder(data_csv_name, lnd_folder, dataset_name, outp, ksplit=1):
+    # set directory structure
+    output_path = os.path.join(outp, dataset_name + '_ksplit' + str(ksplit))
+    train_path = os.path.join(output_path, 'train')
+    test_path = os.path.join(output_path, 'test')
+    if not os.path.exists(train_path):
+        os.makedirs(train_path)
+    if not os.path.exists(test_path):
+        os.makedirs(test_path)
+
+    # read csv
+    data_csv_path = os.path.join(base_data_path, data_csv_name)
+    df = pd.read_csv(data_csv_path)
+
+    # get and set train/test ids
+    all_ids = df['speaker'].unique().tolist()
+    if dataset_name == "KDEF":
+        shuffle_all_ids = ['F30', 'F17', 'M06', 'F20', 'F07', 'M09', 'F21', 'F09', 'F19', 'M24', 'M25', 'F25', 'F14', 'F31', 'F23', 'M07',
+         'M01', 'M04', 'M23', 'M08', 'M15', 'M22', 'F13', 'F11', 'M28', 'F18', 'M32', 'M12', 'M33', 'F26', 'F04', 'F06',
+         'M14', 'F02', 'M18', 'F08', 'F32', 'F35', 'M35', 'M11', 'F29', 'M05', 'F27', 'M21', 'F03', 'M10', 'M13', 'F15',
+         'F10', 'F05', 'M30', 'M03', 'F24', 'M20', 'F01', 'M16', 'F16', 'F34', 'M29', 'F12', 'F33', 'M31', 'M17', 'M26',
+         'F28', 'M27', 'M02', 'M34', 'M19', 'F22']
+    elif dataset_name == 'Rafd':
+        shuffle_all_ids = [45, 33, 28, 20, 8, 49, 70, 10, 60, 24, 23, 22, 43, 67, 68, 40, 26,
+                           64, 57, 15, 12, 21, 7, 47, 54, 29, 4, 52, 44, 59, 50, 2, 53, 9, 36,
+                           39, 73, 46, 32, 30, 51, 3, 48, 18, 11, 5, 31, 42, 27, 63, 1, 65, 19,
+                           38, 61, 14, 37, 56, 69, 55, 16, 71, 35, 41, 72, 58, 25]
+
+    test_num = len(shuffle_all_ids) // 10  # 90/10 split
+
+    if ksplit <= len(shuffle_all_ids) // test_num:
+        test_ids = shuffle_all_ids[(ksplit - 1) * test_num:ksplit * test_num]
+    else:
+        print('hi')
+        test_ids = shuffle_all_ids[(ksplit - 1) * test_num:]
+    train_ids = list(set(all_ids) - set(test_ids))
+
+    all_emotions = df['emotion'].unique().tolist()
+    if dataset_name == 'Rafd':
+        all_emotions = list(set(all_emotions) - {'contemptuous'})
+    # for each emotion
+    for emo in all_emotions:
+        # get train test ids
+        train_emo_spk = df.loc[(df['emotion'] == emo) & df['speaker'].isin(train_ids)]['file_path'].tolist()
+        test_emo_spk = df.loc[(df['emotion']==emo) & df['speaker'].isin(test_ids)]['file_path'].tolist()
+
+        # create dirs
+        train_emo_path = os.path.join(train_path, emo)
+        test_emo_path = os.path.join(test_path, emo)
+        if not os.path.exists(train_emo_path):
+            os.mkdir(train_emo_path)
+        if not os.path.exists(test_emo_path):
+            os.mkdir(test_emo_path)
+        for row in train_emo_spk:
+            lnd_file_basename = os.path.basename(row).split('.')[0]
+            lnd_file_path = os.path.join(lnd_folder, lnd_file_basename + '.txt')
+            shutil.copy2(lnd_file_path, os.path.join(train_emo_path, lnd_file_path.split('/')[-1]))
+        for row in test_emo_spk:
+            lnd_file_basename = os.path.basename(row).split('.')[0]
+            lnd_file_path = os.path.join(lnd_folder, lnd_file_basename + '.txt')
+            shutil.copy2(lnd_file_path, os.path.join(test_emo_path, lnd_file_path.split('/')[-1]))
+
+    with open(os.path.join(output_path, 'train_test_ids.csv'), 'w') as f:
+        json.dump({'train_ids': train_ids, 'test_ids': test_ids}, f)
+
+
 def FormatLndImageFolder(data_csv_name, lnd_folder, dataset_name, test_split):
 
     # get EdgeMap
     EM = EdgeMap(out_res=128, num_parts=1)
 
     # set directory structure
-    output_path = os.path.join(base_output_path, dataset_name + '_LandmarkClassification')
+    output_path = os.path.join(base_output_path, dataset_name + '_FullLandmarkClassification')
     train_path = os.path.join(output_path, 'train')
     test_path = os.path.join(output_path, 'test')
     if not os.path.exists(train_path):
@@ -341,11 +407,11 @@ if __name__ == "__main__":
         if dataset_name == 'KDEF':
             lnd_folder = '../../../datasets/KDEF_Aligned/KDEF_LANDMARKS'
             data_csv_path = '../../../datasets/KDEF_Aligned/KDEF/KDEF.csv'
-            FormatLndImageFolder(data_csv_path, lnd_folder, dataset_name, 0.1)
+            FormatLndImageFolder(data_csv_path, lnd_folder, dataset_name, 0)
         elif dataset_name == 'Rafd':
             lnd_folder = '../../../datasets/Rafd_Aligned/Rafd_LANDMARKS'
             data_csv_path = '../../../datasets/Rafd_Aligned/Rafd/Rafd.csv'
-            FormatLndImageFolder(data_csv_path, lnd_folder, dataset_name, 0.1)
+            FormatLndImageFolder(data_csv_path, lnd_folder, dataset_name, 0)
         elif dataset_name == 'Affectnet':
             csv_path = '/media/mlpboon/X/AffectNetDatabase/training.csv'
             FormatAffectnetEM(csv_path, num_samples_per_class=2000)
@@ -371,10 +437,19 @@ if __name__ == "__main__":
         emo_lnd_folder = args.emo_lnd_folder
         out_folder = args.out_folder
         dirname_protocol = args.dirname_protocol
+        print(neu_img_folder, emo_lnd_folder, out_folder, dirname_protocol)
         FormatLndITLKfold(neu_img_folder, emo_lnd_folder, out_folder, dataset_name, dirname_protocol)
     elif task == 'edgemapITLJoint':
         neu_img_folder = args.neu_img_folder #'../../../LS_Experiments/KDEF_itl_model_20201210-171111/predictions/KDEF/NE'
         emo_lnd_folder = args.emo_lnd_folder #'../../../LS_Experiments/KDEF_itl_model_20201210-171111/predictions/KDEF'
         out_folder = args.out_folder  #'./LndPredJoint'
         dirname_protocol = args.dirname_protocol
+        print(neu_img_folder, emo_lnd_folder, out_folder, dirname_protocol)
         FormatITLMultiFolder(neu_img_folder, emo_lnd_folder, out_folder, dataset_name, dirname_protocol)
+    elif task == 'stargan':
+        dataset = 'Rafd'
+        data_csv_name = os.path.join('../../../datasets',dataset+'_Aligned', dataset, dataset+'.csv')
+        lnd_folder = os.path.join('../../../datasets', dataset+'_Aligned', dataset +'_LANDMARKS')  # set data path
+        outp = '../NNBaseline/' + dataset +'_STARGAN_SPLITS'
+        for split in range(1, 11):
+            FormatStarGanLndFolder(data_csv_name, lnd_folder, dataset, outp, split)

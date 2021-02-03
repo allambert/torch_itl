@@ -9,9 +9,9 @@ from torch_itl import model, sampler, cost, kernel, estimator
 # ----------------------------------
 # Reading input/output data
 # ----------------------------------
-dataset = 'KDEF'  # KDEF or Rafd
+dataset = 'Rafd'  # KDEF or Rafd
 theta_type = 'aff'  # aff or ''
-inp_emotion = 'NE'
+inp_emotion = 'neutral'
 inc_emotion = True  # bool to include (0,0) in emotion embedding
 use_facealigner = True  # bool to use aligned faces (for 'Rafd' - set to true)
 
@@ -30,18 +30,18 @@ print('Reading data')
 if use_facealigner:
     input_data_version = 'facealigner'
     if dataset == 'KDEF':
-        from datasets.datasets import kdef_landmarks_facealigner, kdef_landmarks_facenet
-        # x_train, y_train, x_test, y_test, train_list, test_list = \
-        #     kdef_landmarks_facealigner(data_path, inp_emotion=inp_emotion,
-        #                                inc_emotion=inc_emotion)
+        from datasets.datasets import kdef_landmarks_facealigner #, kdef_landmarks_facenet
         x_train, y_train, x_test, y_test, train_list, test_list = \
-            kdef_landmarks_facenet(data_path, data_emb_path, inp_emotion=inp_emotion,
+            kdef_landmarks_facealigner(data_path, inp_emotion=inp_emotion,
                                        inc_emotion=inc_emotion)
+        # x_train, y_train, x_test, y_test, train_list, test_list = \
+        #     kdef_landmarks_facenet(data_path, data_emb_path, inp_emotion=inp_emotion,
+        #                                inc_emotion=inc_emotion)
     elif dataset == 'Rafd':
         from datasets.datasets import rafd_landmarks_facealigner
         x_train, y_train, x_test, y_test, train_list, test_list = \
             rafd_landmarks_facealigner(data_path, data_csv_path, inp_emotion=inp_emotion,
-                                       inc_emotion=inc_emotion)
+                                       inc_emotion=inc_emotion, kfold=1)
 else:
     from datasets.datasets import import_kdef_landmark_synthesis
     input_data_version = 'aligned2'
@@ -55,13 +55,13 @@ print('data dimensions', n, m, nf)
 # ----------------------------------
 # Set kernel and other params
 # ----------------------------------
-
+learn_itl = False
 kernel_input_learnable = False
 output_var_dependence = False
-save_model = True
-plot_fig = True
-save_pred = True
-get_addon_metrics = True
+save_model = False
+plot_fig = False
+save_pred = False
+get_addon_metrics = False
 
 if kernel_input_learnable:
     NE = 10  # num epochs overall
@@ -87,7 +87,7 @@ if kernel_input_learnable:
 else:
     NE = 1
     ne_fa = 50
-    gamma_inp = 0.5
+    gamma_inp = 3.0
     kernel_input = kernel.Gaussian(gamma_inp)
 
 # define emotion kernel
@@ -153,25 +153,29 @@ itl_estimator = estimator.ITLEstimator(itl_model,
 # ----------------------------------
 # Training
 # ----------------------------------
-alpha_loss = []
-kernel_loss = []
-for ne in range(NE):
-    itl_estimator.fit_alpha(x_train, y_train, n_epochs=ne_fa,
-                        lr=lr_alpha, line_search_fn='strong_wolfe', warm_start=False)
-    alpha_loss += itl_estimator.losses
-    print(itl_estimator.losses)
-    itl_estimator.clear_memory()
-    if kernel_input_learnable:
-        itl_estimator.fit_kernel_input(x_train, y_train, n_epochs=ne_fki)
-        kernel_loss += itl_estimator.model.kernel_input.losses
-        print(itl_estimator.model.kernel_input.losses)
-        itl_estimator.model.kernel_input.clear_memory()
+if learn_itl:
+    alpha_loss = []
+    kernel_loss = []
+    for ne in range(NE):
+        itl_estimator.fit_alpha(x_train, y_train, n_epochs=ne_fa,
+                            lr=lr_alpha, line_search_fn='strong_wolfe', warm_start=False)
+        alpha_loss += itl_estimator.losses
+        print(itl_estimator.losses)
+        itl_estimator.clear_memory()
+        if kernel_input_learnable:
+            itl_estimator.fit_kernel_input(x_train, y_train, n_epochs=ne_fki)
+            kernel_loss += itl_estimator.model.kernel_input.losses
+            print(itl_estimator.model.kernel_input.losses)
+            itl_estimator.model.kernel_input.clear_memory()
+else:
+    itl_estimator.fit_closed_form(x_train, y_train)
 
 # ----------------------------------
 # Save model and params
 # -----------------------------------
 timestr = time.strftime("%Y%m%d-%H%M%S")
 save_dir = os.path.join(output_folder, dataset + '_' + inp_emotion + '_itl_model_' + timestr)
+save_dir += '_CF' if not learn_itl else '_GD'
 if save_model:
     MODEL_DIR = os.path.join(save_dir, 'model')
     if not os.path.exists(MODEL_DIR):
@@ -206,7 +210,7 @@ if save_model:
 pred_test1 = itl_estimator.model.forward(x_test, sampler_.sample(m))
 
 pred_test2 = itl_estimator.model.forward(x_test, torch.tensor([[0.866, 0.5]], dtype=torch.float))
-
+print('cost', itl_estimator.cost(y_test, pred_test1, sampler_.sample(m)))
 if get_addon_metrics:
     print('cost', itl_estimator.cost(y_test, pred_test1, sampler_.sample(m)))
     # compute expected euclidean distance between samples and mean for each emotion

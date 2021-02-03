@@ -196,6 +196,7 @@ def kdef_landmarks_facealigner(path_to_landmarks, inp_emotion='NE', inc_emotion=
     else:
         shuffle_all_ids = all_ids.copy()
         random.Random(random_seed).shuffle(shuffle_all_ids)
+        #print(shuffle_all_ids)
         test_num = len(shuffle_all_ids)//10  # 90/10 split
         if kfold <= len(shuffle_all_ids)//test_num:
             test_identities = shuffle_all_ids[(kfold-1)*test_num:kfold*test_num]
@@ -203,7 +204,8 @@ def kdef_landmarks_facealigner(path_to_landmarks, inp_emotion='NE', inc_emotion=
             test_identities = shuffle_all_ids[(kfold-1)*test_num:]
 
     # define emotion list, same as in sampler (different abbrv. due to dataset)
-    all_emotions = ['AF', 'AN', 'DI', 'HA', 'SA', 'SU', 'NE']
+    #all_emotions = ['AF', 'AN', 'DI', 'HA', 'SA', 'SU', 'NE']
+    all_emotions = ['AN', 'DI', 'AF', 'HA', 'SA', 'SU', 'NE']
     # find inp emotion index
     inp_emo_idx = all_emotions.index(inp_emotion)
 
@@ -480,6 +482,7 @@ def rafd_landmarks_facealigner(path_to_landmarks, path_to_csv, inp_emotion='neut
     else:
         shuffle_all_ids = all_ids.copy()
         random.Random(random_seed).shuffle(shuffle_all_ids)
+        print(shuffle_all_ids)
         test_num = len(shuffle_all_ids) // 10  # 90/10 split
         if kfold <= len(shuffle_all_ids) // test_num:
             test_ids = shuffle_all_ids[(kfold - 1) * test_num:kfold * test_num]
