@@ -11,4 +11,4 @@ The folder contains the following script:
 
 - `missing_data`: Experiments evauating the performances of the estimator in the presence of missing data.
 
-- `visualization.py`: Script allowing to generate figures presented in the paper.
+- `visualization.py`: Script allowing to generate face figures presented in the paper.
