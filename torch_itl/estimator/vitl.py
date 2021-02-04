@@ -106,22 +106,22 @@ class VITL(object):
     def fit_alpha_gd(self, x, y, n_epochs=500, solver=torch.optim.LBFGS,
                      warm_start=True, **kwargs):
         """
-        Fits the parameters alpha of the model, based on the representer theorem
-        with gradient descent
+        Fits the parameters alpha of the model, based on the representer t
+        heorem with gradient descent
+
         Parameters
         ----------
-        x: torch.Tensor of shape (n_samples, n_features_1)
+        x: torch.Tensor, shape (n_samples, n_features_1)
             Input vector of samples used in the empirical risk
-        y: torch.Tensor of shape (n_samples, n_features_2)
+        y: torch.Tensor, shape (n_samples, n_features_2)
             Output vector of samples used in the empirical risk
-        n_epochs: Int
+        n_epochs: int
             Max number of iterations for training
         solver: torch.Optimizer
             Prefered gradient descent algorithm -- beware to match **kwargs
-        warm_start: Bool
+        warm_start: bool
             Keep previous estimate of alpha (or not)
-        **kwargs:
-            Arguments to be used with the optimizer
+
         Returns
         -------
         Nothing
