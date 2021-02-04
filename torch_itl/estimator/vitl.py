@@ -2,6 +2,7 @@ import torch
 import time
 import torch.optim as optim
 
+
 class VITL(object):
     """Implements VITL
     It is a vectorial outputs extension to ITL, proposed in
@@ -102,7 +103,8 @@ class VITL(object):
             raise Exception('No training data provided')
         return self.risk(self.model.x_train, self.model.y_train)
 
-    def fit_alpha_gd(self, x, y, n_epochs=500, solver=torch.optim.LBFGS, warm_start=True, **kwargs):
+    def fit_alpha_gd(self, x, y, n_epochs=500, solver=torch.optim.LBFGS,
+                     warm_start=True, **kwargs):
         """
         Fits the parameters alpha of the model, based on the representer theorem
         with gradient descent
@@ -159,8 +161,8 @@ class VITL(object):
 
     def fit_kernel_input(self, x, y, n_epochs=150):
         """
-        Fits the parameters of the neural network associated to the input kernel
-        (deep kernel learning) with gradient descent
+        Fits the parameters of the neural network associated to the input
+        kernel (deep kernel learning) with gradient descent
         Parameters
         ----------
         x: torch.Tensor of shape (n_samples, n_features_1)
@@ -206,8 +208,8 @@ class VITL(object):
 
     def fit_kernel_output(self, x, y, n_epochs=150):
         """
-        Fits the parameters of the neural network associated to the output kernel
-        (deep kernel learning)
+        Fits the parameters of the neural network associated to the output
+        kernel (deep kernel learning)
         Parameters
         ----------
         x: torch.Tensor of shape (n_samples, n_features_1)

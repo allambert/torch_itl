@@ -1,8 +1,9 @@
 import torch
+
 from .utils import rbf_kernel, get_anchors_gaussian_rff
 
-class Gaussian(object):
 
+class Gaussian(object):
     def __init__(self, gamma):
         self.gamma = gamma
         self.is_learnable = False
@@ -12,7 +13,6 @@ class Gaussian(object):
 
 
 class GaussianRFF(object):
-
     def __init__(self, dim_input, dim_rff, gamma):
         self.dim_rff = dim_rff
         self.is_learnable = False
@@ -22,7 +22,8 @@ class GaussianRFF(object):
     def feature_map(self, X):
         a = torch.cos(X @ self.anchors)
         b = torch.sin(X @ self.anchors)
-        return 1 / torch.sqrt(torch.Tensor([self.dim_rff])) * torch.cat((a, b), 1)
+        return 1 / torch.sqrt(torch.Tensor([self.dim_rff])) * \
+            torch.cat((a, b), 1)
 
 
 class Linear(object):

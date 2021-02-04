@@ -59,17 +59,26 @@ for f in file_list:
                                                   landmarks.part(1)))
         # Draw the face landmarks on the screen.
         # win.add_overlay(shape)
-    with open(os.path.join(output_folder, f.split('/')[-1].split('.')[0] + '.txt'), 'w') as file:
+    with open(os.path.join(
+            output_folder, f.split('/')[-1].split('.')[0] + '.txt'), 'w') as f:
         for pn in range(68):
-            file.write("{} {}\n".format(landmarks.part(pn).x,landmarks.part(pn).y)) 
+            f.write("{} {}\n".format(
+                landmarks.part(pn).x, landmarks.part(pn).y))
     # win.add_overlay(dets)
-    if draw_bool==1:
+    if draw_bool == 1:
         draw = ImageDraw.Draw(orig_image)
         colors = [(0, 0, 256)]
         for img_index_i in range(0, 68):
-            draw.line([landmarks.part(img_index_i).x, landmarks.part(img_index_i).y-4, landmarks.part(img_index_i).x, landmarks.part(img_index_i).y+4], fill=colors[0 % 5])
-            draw.line([landmarks.part(img_index_i).x-4, landmarks.part(img_index_i).y, landmarks.part(img_index_i).x+4, landmarks.part(img_index_i).y], fill=colors[0 % 5])
+            draw.line([landmarks.part(img_index_i).x,
+                       landmarks.part(img_index_i).y - 4,
+                       landmarks.part(img_index_i).x,
+                       landmarks.part(img_index_i).y + 4],
+                      fill=colors[0 % 5])
+            draw.line([landmarks.part(img_index_i).x - 4,
+                       landmarks.part(img_index_i).y,
+                       landmarks.part(img_index_i).x + 4,
+                       landmarks.part(img_index_i).y],
+                      fill=colors[0 % 5])
         plt.imshow(orig_image)
         plt.show()
         dlib.hit_enter_to_continue()
-

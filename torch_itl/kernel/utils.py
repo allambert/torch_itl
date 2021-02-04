@@ -1,5 +1,6 @@
 import torch
 
+
 def rbf_kernel(X, Y=None, gamma=None):
     """Compute rbf Gram matrix between X and Y (or X)
     courtesy of plaforgue
