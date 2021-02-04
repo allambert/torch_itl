@@ -1,9 +1,12 @@
+import random
 import os
 import torch
 import numpy as np
-np.random.seed(seed=21)
-import random
+import pandas as pd
+
 from .synthetic_quantile import toy_data_quantile
+
+np.random.seed(seed=21)
 
 
 def import_data_otoliths():
@@ -60,20 +63,22 @@ def import_toy_synthesis(n_samples, n_theta):
         torch.from_numpy(x_test).float(), torch.from_numpy(y_test).float()
 
 
-def kdef_landmarks_facealigner(path_to_landmarks, inp_emotion='NE', inc_emotion=False,
-                               kfold=0, random_seed=21):
+def kdef_landmarks_facealigner(
+        path_to_landmarks, inp_emotion='NE', inc_emotion=False, kfold=0,
+        random_seed=21):
     """
     Get data to train vITL for KDEF
     Parameters
     ----------
     path_to_landmarks: str
-                       path to folder containing landmarks
+        path to folder containing landmarks
     inp_emotion: str
-                 the input emotion for single model
+        the input emotion for single model
     inc_emotion: bool
-                 whether to include inp_emotion in output
+        whether to include inp_emotion in output
     kfold: int
-           which split to compute data for, 0 is a preselected split, start from 1
+        which split to compute data for, 0 is a preselected split,
+        start from 1
     random_seed: set to 21 for reproducibility
 
     Returns
@@ -96,7 +101,8 @@ def kdef_landmarks_facealigner(path_to_landmarks, inp_emotion='NE', inc_emotion=
         shuffle_all_ids = all_ids.copy()
         random.Random(random_seed).shuffle(shuffle_all_ids)
         test_num = len(shuffle_all_ids)//10  # 90/10 split
-        test_identities = shuffle_all_ids[(kfold - 1) * test_num:kfold * test_num]
+        test_identities = shuffle_all_ids[(
+            kfold - 1) * test_num:kfold * test_num]
 
     # define emotion list, same as in sampler (different abbrv. due to dataset)
     all_emotions = ['AN', 'DI', 'AF', 'HA', 'SA', 'SU', 'NE']
@@ -126,21 +132,25 @@ def kdef_landmarks_facealigner(path_to_landmarks, inp_emotion='NE', inc_emotion=
 
     # read input/output train
     for row in train_list:
-        tmp_ne = np.loadtxt(os.path.join(path_to_landmarks, row[0])).reshape(68, 2)
+        tmp_ne = np.loadtxt(os.path.join(
+            path_to_landmarks, row[0])).reshape(68, 2)
         train_input.append(tmp_ne.flatten())
         tmp_ems = []
         for row_em in row[1]:
-            tmp_em = np.loadtxt(os.path.join(path_to_landmarks, row_em)).reshape(68, 2)
+            tmp_em = np.loadtxt(os.path.join(
+                path_to_landmarks, row_em)).reshape(68, 2)
             tmp_ems.append(tmp_em.flatten())
         train_output.append(tmp_ems)
 
     # read input/output test
     for row in test_list:
-        tmp_ne = np.loadtxt(os.path.join(path_to_landmarks, row[0])).reshape(68,2)
+        tmp_ne = np.loadtxt(os.path.join(
+            path_to_landmarks, row[0])).reshape(68, 2)
         test_input.append(tmp_ne.flatten())
         tmp_ems = []
         for row_em in row[1]:
-            tmp_em = np.loadtxt(os.path.join(path_to_landmarks, row_em)).reshape(68, 2)
+            tmp_em = np.loadtxt(os.path.join(
+                path_to_landmarks, row_em)).reshape(68, 2)
             tmp_ems.append(tmp_em.flatten())
         test_output.append(tmp_ems)
 
@@ -151,26 +161,29 @@ def kdef_landmarks_facealigner(path_to_landmarks, inp_emotion='NE', inc_emotion=
     test_input = np.array(test_input) / im_size
     test_output = np.array(test_output) / im_size
 
-    return torch.from_numpy(train_input).float(), torch.from_numpy(train_output).float(),\
-           torch.from_numpy(test_input).float(), torch.from_numpy(test_output).float(), \
-           train_list, test_list
+    return (torch.from_numpy(train_input).float(),
+            torch.from_numpy(train_output).float(),
+            torch.from_numpy(test_input).float(),
+            torch.from_numpy(test_output).float(),
+            train_list, test_list)
 
 
-def rafd_landmarks_facealigner(path_to_landmarks, inp_emotion='neutral', inc_emotion=False,
-                               kfold=0, random_seed=21):
+def rafd_landmarks_facealigner(
+        path_to_landmarks, inp_emotion='neutral', inc_emotion=False, kfold=0,
+        random_seed=21):
     """
     Get data to train vITL for RaFD
 
     Parameters
     ----------
     path_to_landmarks: str
-                       path to folder cotaining landmarks
+        path to folder cotaining landmarks
     inp_emotion: str
-                 the input emotion for single model
+        the input emotion for single model
     inc_emotion: bool
-                 whether to include inp_emotion in output
+        whether to include inp_emotion in output
     kfold: int
-           which split to compute data for, 0 is a preselected split, start from 1
+        which split to compute data for, 0 is a preselected split, start from 1
     random_seed: set to 21 for reproducibility
 
     Returns
@@ -180,12 +193,14 @@ def rafd_landmarks_facealigner(path_to_landmarks, inp_emotion='neutral', inc_emo
 
     train_list = []
     test_list = []
-    all_ids = ['01', '02', '03', '04', '05', '07', '08', '09', '10', '11', '12',
-               '14', '15', '16', '18', '19', '20', '21', '22', '23', '24', '25',
-               '26', '27', '28', '29', '30', '31', '32', '33', '35', '36', '37',
-               '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48',
-               '49', '50', '51', '52', '53', '54', '55', '56', '57', '58', '59',
-               '60', '61', '63', '64', '65', '67', '68', '69', '70', '71', '72', '73']
+    all_ids = [
+        '01', '02', '03', '04', '05', '07', '08', '09', '10', '11', '12',
+        '14', '15', '16', '18', '19', '20', '21', '22', '23', '24', '25',
+        '26', '27', '28', '29', '30', '31', '32', '33', '35', '36', '37',
+        '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48',
+        '49', '50', '51', '52', '53', '54', '55', '56', '57', '58', '59',
+        '60', '61', '63', '64', '65', '67', '68', '69', '70', '71', '72',
+        '73']
 
     # set test identities
     if kfold == 0:
@@ -196,7 +211,8 @@ def rafd_landmarks_facealigner(path_to_landmarks, inp_emotion='neutral', inc_emo
         test_num = len(shuffle_all_ids) // 10  # 90/10 split
         test_ids = shuffle_all_ids[(kfold - 1) * test_num:kfold * test_num]
 
-    all_emotions = ['angry', 'contemptuous', 'disgusted', 'fearful', 'happy', 'sad', 'surprised', 'neutral']
+    all_emotions = ['angry', 'contemptuous', 'disgusted',
+                    'fearful', 'happy', 'sad', 'surprised', 'neutral']
 
     inp_emo_idx = all_emotions.index(inp_emotion)
     num_emos = len(all_emotions)
@@ -210,7 +226,8 @@ def rafd_landmarks_facealigner(path_to_landmarks, inp_emotion='neutral', inc_emo
         con_im = fnames.pop(1)
 
         assert set([fn[8:10] for fn in fnames]) == set([all_ids[i]])
-        assert set([fn.split('_')[4] for fn in fnames]) == set(all_emotions)- {'contemptuous'}
+        assert set([fn.split('_')[4] for fn in fnames]) == set(
+            all_emotions) - {'contemptuous'}
 
         if inp_emo_idx > 1:
             inp_im = fnames[inp_emo_idx-1]
@@ -231,21 +248,25 @@ def rafd_landmarks_facealigner(path_to_landmarks, inp_emotion='neutral', inc_emo
 
     # read input/output train
     for row in train_list:
-        tmp_ne = np.loadtxt(os.path.join(path_to_landmarks, row[0])).reshape(68, 2)
+        tmp_ne = np.loadtxt(os.path.join(
+            path_to_landmarks, row[0])).reshape(68, 2)
         train_input.append(tmp_ne.flatten())
         tmp_ems = []
         for row_em in row[1]:
-            tmp_em = np.loadtxt(os.path.join(path_to_landmarks, row_em)).reshape(68, 2)
+            tmp_em = np.loadtxt(os.path.join(
+                path_to_landmarks, row_em)).reshape(68, 2)
             tmp_ems.append(tmp_em.flatten())
         train_output.append(tmp_ems)
 
     # read input/output test
     for row in test_list:
-        tmp_ne = np.loadtxt(os.path.join(path_to_landmarks, row[0])).reshape(68,2)
+        tmp_ne = np.loadtxt(os.path.join(
+            path_to_landmarks, row[0])).reshape(68, 2)
         test_input.append(tmp_ne.flatten())
         tmp_ems = []
         for row_em in row[1]:
-            tmp_em = np.loadtxt(os.path.join(path_to_landmarks, row_em)).reshape(68, 2)
+            tmp_em = np.loadtxt(os.path.join(
+                path_to_landmarks, row_em)).reshape(68, 2)
             tmp_ems.append(tmp_em.flatten())
         test_output.append(tmp_ems)
 
@@ -256,8 +277,8 @@ def rafd_landmarks_facealigner(path_to_landmarks, inp_emotion='neutral', inc_emo
     test_input = np.array(test_input) / im_size
     test_output = np.array(test_output) / im_size
     return torch.from_numpy(train_input).float(), torch.from_numpy(train_output).float(), \
-           torch.from_numpy(test_input).float(), torch.from_numpy(test_output).float(), \
-           train_list, test_list
+        torch.from_numpy(test_input).float(), torch.from_numpy(test_output).float(), \
+        train_list, test_list
 
 
 def get_data_landmarks(dataset, path_to_landmarks, kfold=0, random_seed=21):
@@ -277,18 +298,23 @@ def get_data_landmarks(dataset, path_to_landmarks, kfold=0, random_seed=21):
     -------
     data_train, data_test
     '''
-    if dataset=='KDEF':
-        x_train, y_train, x_test, y_test, train_list, test_list = kdef_landmarks_facealigner(
-            path_to_landmarks, inp_emotion='AN', inc_emotion=True, kfold=kfold, random_seed=random_seed)
+    if dataset == 'KDEF':
+        x_train, y_train, x_test, y_test, train_list, test_list = \
+            kdef_landmarks_facealigner(
+                path_to_landmarks, inp_emotion='AN', inc_emotion=True,
+                kfold=kfold, random_seed=random_seed)
 
-    elif dataset=='RaFD':
-        x_train, y_train, x_test, y_test, train_list, test_list = rafd_landmarks_facealigner(
-            path_to_landmarks, inp_emotion='angry', inc_emotion=True, kfold=kfold, random_seed=random_seed)
+    elif dataset == 'RaFD':
+        x_train, y_train, x_test, y_test, train_list, test_list = \
+            rafd_landmarks_facealigner(
+                path_to_landmarks, inp_emotion='angry', inc_emotion=True,
+                kfold=kfold, random_seed=random_seed)
 
     else:
         raise Exception('Unknown dataset')
 
     return y_train, y_test
+
 
 def import_affectnet_va_embedding(affect_net_csv_path):
     if not affect_net_csv_path == '':
@@ -307,11 +333,11 @@ def import_affectnet_va_embedding(affect_net_csv_path):
                                      df[df[6] == key][8].mean()]
     else:
         emo_va = {'Neutral': [-0.06249655698883391, -0.019669702033559486],
-         'Happy': [0.6647930758154823, 0.07025315235958239],
-         'Sad': [-0.6364936709598201, -0.25688320447600566],
-         'Surprise': [0.17960005233680493, 0.6894792038743631],
-         'Fear': [-0.1253752865553082, 0.7655788112100937],
-         'Disgust': [-0.6943645673378837, 0.457145871269001],
-         'Anger': [-0.452336028803629, 0.5656012294430937],
-         'Contempt': [-0.5138537435929467, 0.5825553992724378]}
+                  'Happy': [0.6647930758154823, 0.07025315235958239],
+                  'Sad': [-0.6364936709598201, -0.25688320447600566],
+                  'Surprise': [0.17960005233680493, 0.6894792038743631],
+                  'Fear': [-0.1253752865553082, 0.7655788112100937],
+                  'Disgust': [-0.6943645673378837, 0.457145871269001],
+                  'Anger': [-0.452336028803629, 0.5656012294430937],
+                  'Contempt': [-0.5138537435929467, 0.5825553992724378]}
     return emo_va
