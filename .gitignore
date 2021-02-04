@@ -6,3 +6,4 @@ torch_itl/model/__pycache__/
 torch_itl/sampler/__pycache__/
 datasets/__pycache__/
 junk_test.py
+tmp/*
