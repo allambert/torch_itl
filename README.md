@@ -17,7 +17,7 @@ This installs automatically the non-satisfied dependencies in `./requirements.tx
 Demos
 =====
 
-You can find examples for both problems in the demo section, for both [infinite quantile regression](https://github.com/allambert/torch_itl/tree/release/demos/quantile) and [emotion transfer](https://github.com/allambert/torch_itl/tree/release/demos/emotion_transfer).
+You can find examples for both problems in the demo section, for both [infinite quantile regression](https://github.com/allambert/torch_itl/tree/master/demos/quantile) and [emotion transfer](https://github.com/allambert/torch_itl/tree/master/demos/emotion_transfer).
 
 
 Cite
