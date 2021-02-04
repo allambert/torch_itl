@@ -42,7 +42,3 @@ If you use this code, please cite the corresponding work:
   author={Lambert, Alex and Parekh, Sanjeel and Szab{\'o}, Zolt{\'a}n and d’Alch{\'e}-Buc, Florence},
   year={2021}
 }
-
-
-[1]:  https://github.com/allambert/torch_itl/workflows/build/badge.svg?branch=master
-[2]:  https://github.com/allambert/torch_itl/actions?query=workflow%3Abuild
