@@ -147,6 +147,7 @@ def data_preprocess(dataset, data_dir, dest_base_dir, predictor_path):
 			directory to store all outputs
 	predictor_path:
 			predictor for computing dlib landmarks
+			Download from http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
 
 	Returns
 	-------
@@ -202,14 +203,18 @@ def data_preprocess(dataset, data_dir, dest_base_dir, predictor_path):
 
 
 if __name__ == "__main__":
+	# download from http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
 	predictor_path = 'shape_predictor_68_face_landmarks.dat'
 
 	dataset = 'KDEF'
 	data_dir = 'PATH_TO_KDEF'
-	dest_dir = '../../../torch_itl/datasets'
+	dest_dir = 'DESTINATION PATH'
 
 	# dataset = 'Rafd'
 	# data_dir = 'PATH_TO_Rafd'
+	# dest_dir = 'DESTINATION PATH'
+
+	# change dest dir to be compatible with other scripts and store in right location
 	# dest_dir = '../../../torch_itl/datasets'
 
 	data_preprocess(dataset, data_dir, dest_dir, predictor_path)
