@@ -1,7 +1,7 @@
-from .kernel import *
-from .model import *
-from .sampler import *
-from .estimator import *
+import kernel
+import model
+import sampler
+import estimator
 
 
 __version__ = '0.1.dev'

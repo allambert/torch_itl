@@ -1,5 +1,4 @@
 from .vitl import VITL
-from ..model import DecomposableIdentity
 from .utils import ploss_with_crossing
 
 class IQR(VITL):

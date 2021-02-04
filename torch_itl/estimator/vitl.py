@@ -106,8 +106,8 @@ class VITL(object):
     def fit_alpha_gd(self, x, y, n_epochs=500, solver=torch.optim.LBFGS,
                      warm_start=True, **kwargs):
         """
-        Fits the parameters alpha of the model, based on the representer theorem
-        with gradient descent
+        Fits the parameters alpha of the model, based on the representer
+        theorem with gradient descent
         Parameters
         ----------
         x: torch.Tensor of shape (n_samples, n_features_1)
