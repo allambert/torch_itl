@@ -111,7 +111,7 @@ min_rafd, _ = test_losses_rafd.mean(1).min(axis=0)
 # %%
 plt.figure()
 plt.xlabel("% of missing data")
-plt.ylabel("$\log_{10}$ Test MSE")
+plt.ylabel(r"$\log_{10}$ Test MSE")
 plt.plot(idx_kdef, torch.log(mean_kdef),
          c='black', label='KDEF mean', marker=',')
 plt.plot(idx_kdef, torch.log(min_kdef), c='black',
