@@ -2,8 +2,11 @@ import torch
 
 
 def kron(matrix1, matrix2):
-    return torch.ger(matrix1.view(-1), matrix2.view(-1)).reshape(*(matrix1.size() + matrix2.size())).permute(
-        [0, 2, 1, 3]).reshape(matrix1.size(0) * matrix2.size(0), matrix1.size(1) * matrix2.size(1))
+    return torch.ger(
+        matrix1.view(-1),
+        matrix2.view(-1)).reshape(*(matrix1.size() + matrix2.size())).permute(
+        [0, 2, 1, 3]).reshape(matrix1.size(0) * matrix2.size(0),
+                              matrix1.size(1) * matrix2.size(1))
 
 
 class Decomposable(object):
@@ -20,7 +23,7 @@ class Decomposable(object):
 
     def compute_gram(self, x, thetas):
         """
-        Computes and stores the gram matrices of the model anchors and (x,thetas)
+        Compute and store the gram matrices of the model anchors and (x,thetas)
         Parameters
         ----------
         x:  torch.Tensor of shape (n_samples, n_features_1)
@@ -30,7 +33,8 @@ class Decomposable(object):
             default: locations used when learning
         Returns
         -------
-        G_xt: torch.Tensor of shape (n_samples * n_anchors, n_samples * n_anchors)
+        G_xt: torch.Tensor, \
+                shape (n_samples * n_anchors, n_samples * n_anchors)
             Gram matrix used for predictions
         """
         G_x = self.kernel_input.compute_gram(x, self.x_train)

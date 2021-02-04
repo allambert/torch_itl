@@ -59,8 +59,10 @@ def import_toy_synthesis(n_samples, n_theta):
     y_train = Y[0:n_samples//2]
     x_test = X[n_samples//2:]
     y_test = Y[n_samples//2:]
-    return torch.from_numpy(x_train).float(), torch.from_numpy(y_train).float(), \
-        torch.from_numpy(x_test).float(), torch.from_numpy(y_test).float()
+    return (torch.from_numpy(x_train).float(),
+            torch.from_numpy(y_train).float(),
+            torch.from_numpy(x_test).float(),
+            torch.from_numpy(y_test).float())
 
 
 def kdef_landmarks_facealigner(
@@ -276,9 +278,11 @@ def rafd_landmarks_facealigner(
     train_output = np.array(train_output) / im_size
     test_input = np.array(test_input) / im_size
     test_output = np.array(test_output) / im_size
-    return torch.from_numpy(train_input).float(), torch.from_numpy(train_output).float(), \
-        torch.from_numpy(test_input).float(), torch.from_numpy(test_output).float(), \
-        train_list, test_list
+    return (torch.from_numpy(train_input).float(),
+            torch.from_numpy(train_output).float(),
+            torch.from_numpy(test_input).float(),
+            torch.from_numpy(test_output).float(),
+            train_list, test_list)
 
 
 def get_data_landmarks(dataset, path_to_landmarks, kfold=0, random_seed=21):
@@ -291,7 +295,8 @@ def get_data_landmarks(dataset, path_to_landmarks, kfold=0, random_seed=21):
     path_to_landmarks: str
                        path to folder cotaining landmarks
     kfold: int
-           which split to compute data for, 0 is a preselected split, start from 1
+           which split to compute data for, 0 is a preselected split, \
+               start from 1
     random_seed: set to 21 for reproducibility
 
     Returns

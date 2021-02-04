@@ -19,7 +19,9 @@ def bst(alpha, tau):
 
 
 def iht(alpha, tau):
-    return torch.where(alpha.abs() - tau < 0, torch.zeros_like(alpha), alpha.abs() - tau) * torch.sign(alpha)
+    return torch.where(alpha.abs() - tau < 0,
+                       torch.zeros_like(alpha),
+                       alpha.abs() - tau) * torch.sign(alpha)
 
 
 def squared_norm(y_true, y_pred, thetas, mask=None):
@@ -49,9 +51,11 @@ def ploss(y_true, y_pred, probs):
                      (probs - 1).view(-1) * residual).sum() / n / m
     return(loss)
 
-def ploss_dual(res,thetas):
-    condition = (res < thetas) & (res >  thetas - 1)
+
+def ploss_dual(res, thetas):
+    condition = (res < thetas) & (res > thetas - 1)
     return torch.where(condition, 0, sys.float_info.max)
+
 
 def closs(y_pred):
     """Compute the crossing loss.
