@@ -225,7 +225,7 @@ def rafd_landmarks_facealigner(
         # get neutral and put it at the end
         neu_im = fnames.pop(5)
         fnames.append(neu_im)
-        con_im = fnames.pop(1)
+        _ = fnames.pop(1)
 
         assert set([fn[8:10] for fn in fnames]) == set([all_ids[i]])
         assert set([fn.split('_')[4] for fn in fnames]) == set(

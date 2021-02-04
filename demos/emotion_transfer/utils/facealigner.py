@@ -119,7 +119,8 @@ def list_and_landmarks(dataset, data_dir, lnd_dir, paths_txt, predictor_path):
     else:
         dlib_cmd = ' '.join(['python dlib_landmarks.py',
                              predictor_path, paths_txt, lnd_dir])
-        with subprocess.Popen(dlib_cmd, shell=True, stdout=subprocess.PIPE) as cmd:
+        with subprocess.Popen(
+                dlib_cmd, shell=True, stdout=subprocess.PIPE) as cmd:
             for line in cmd.stdout:
                 print(line)
     return img_list
@@ -129,19 +130,21 @@ def data_preprocess(dataset, data_dir, dest_base_dir, predictor_path):
     """
     Parameters
     ----------
-    dataset: str
-                    KDEF or Rafd, dataset names
+    dataset : str
+        KDEF or Rafd, dataset names
     data_dir: str
-                    path to data directory to fetch images
+        path to data directory to fetch images
     dest_base_dir:
-                    directory to store all outputs
+        directory to store all outputs
     predictor_path:
-                    predictor for computing dlib landmarks
-                    Download from http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2
+        predictor for computing dlib landmarks
+        Download from http://dlib.net/files/shape_predictor_68_face_\
+                                        landmarks.dat.bz2
 
     Returns
     -------
-    Saves all dlib landmarks, aligned images/landmarks in dedicated folders on dest_base_dir
+    Saves all dlib landmarks, aligned images/landmarks in dedicated folders on
+        dest_base_dir
     """
 
     print('COMPUTING LANDMARKS')

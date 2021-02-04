@@ -1,6 +1,7 @@
 from .vitl import VITL
 from .utils import ploss_with_crossing
 
+
 class IQR(VITL):
     """Implements Infinite Quantile Regression as proposed in
     'Emotion Transfer Using Vector-Valued Infinite Task Learning'
