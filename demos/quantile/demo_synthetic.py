@@ -53,11 +53,12 @@ est.fit_alpha_gd(x_train, y_train, n_epochs=40,
 
 plt.figure()
 plt.title("Loss evolution with time")
-plt.plot(est.losses)
+plt.semilogy(est.losses)
 plt.show(block=False)
 best_loss = est.losses[-1]
 
 # Plotting the model on test points
+# %%
 
 probs = est.sampler.sample(30)
 x_test = torch.linspace(0, 1.4, 100).view(-1, 1)
