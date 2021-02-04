@@ -1,4 +1,14 @@
-from setuptools import setup
+import os
+from setuptools import setup, find_packages
+
+version = None
+with open(os.path.join('torch_itl', '__init__.py'), 'r') as fid:
+    for line in (line.strip() for line in fid):
+        if line.startswith('__version__'):
+            version = line.split('=')[1].strip().strip('\'')
+            break
+if version is None:
+    raise RuntimeError('Could not determine version')
 
 
 def parse_requirements(filename):
@@ -12,13 +22,12 @@ install_reqs = parse_requirements('./requirements.txt')
 reqs = [str(ir) for ir in install_reqs]
 
 setup(name='torch_itl',
-      version='0.1dev',
+      version=version,
       description='pytorch compatible integral loss minimization',
       author='Alex Lambert',
       author_email='alex.lambert@protonmail.com',
       license='MIT',
-      packages=['torch_itl', 'torch_itl.estimator', 'torch_itl.kernel',
-                'torch_itl.model', 'torch_itl.sampler', 'torch_itl.datasets'],
+      packages=find_packages(),
       include_package_data=True,
       install_requires=reqs,
       zip_safe=False)
