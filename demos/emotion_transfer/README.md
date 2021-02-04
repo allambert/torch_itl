@@ -11,6 +11,6 @@ The folder contains the following script:
 
 - `missing_data`: Experiments evauating the performances of the estimator in the presence of missing data.
 
-- `visualization.py`: Script allowing to generate face figures presented in the paper.
-
 **Remark**: Please note that to run any of the above mentioned scripts you'll need to first extract landmarks from frontal images for each of these datasets. To easily do so, we have provided some helper scripts and instructions under `utils`.
+
+The video advertised in the paper is `vITL_emotion.mp4`.
