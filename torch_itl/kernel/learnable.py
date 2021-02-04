@@ -12,9 +12,9 @@ class LearnableKernel(object):
 
     def compute_gram(self, X, Y=None):
         if Y is None:
-            return self.kernel.compute_gram(self.model.forward(X), Y=None, gamma=self.gamma)
+            return self.kernel.compute_gram(self.model.forward(X), Y=None)
         else:
-            return self.kernel.compute_gram(self.model.forward(X), self.model.forward(Y), self.gamma)
+            return self.kernel.compute_gram(self.model.forward(X), self.model.forward(Y))
 
     def regularization(self):
         return 0

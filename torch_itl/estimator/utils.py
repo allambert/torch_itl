@@ -35,16 +35,16 @@ def ploss(y_true, y_pred, probs):
     """Computes the pinball loss.
     Parameters
     ----------
-    y_true : {tensor-like}, shape = [n_samples]
-    y_pred : {tensor-like}, shape = [n_samples,n_quantiles]
-    probs : {tensor-like}, shape = [n_quantiles]
+    y_true : {tensor-like}, shape = [n_samples, 1]
+    y_pred : {tensor-like}, shape = [n_samples, n_quantiles, 1]
+    probs : {tensor-like}, shape = [n_quantiles, 1]
     Returns
     -------
     l : {tensor}, shape = [1]
         Average loss for all quantile levels.
     """
-    residual = y_true.view(-1, 1) - y_pred
-    n, m = residual.shape
+    n, m, _ = y_pred.shape
+    residual = y_true.repeat(m).reshape(m, n).T - y_pred.squeeze()
     loss = torch.max(probs.view(-1) * residual,
                      (probs - 1).view(-1) * residual).sum() / n / m
     return(loss)
@@ -64,7 +64,7 @@ def closs(y_pred):
     l : {array}, shape = [1]
         Average loss for all quantile leves.
     """
-    n, m = y_pred.shape
+    n, m, _ = y_pred.shape
     res = torch.max(y_pred[:, :-1] - y_pred[:, 1:],
                     torch.zeros_like(y_pred[:, :-1]))
     return(res.sum())
