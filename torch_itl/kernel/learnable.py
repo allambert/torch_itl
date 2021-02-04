@@ -1,5 +1,3 @@
-import torch
-
 from .kernel import Gaussian, GaussianRFF, Linear
 
 

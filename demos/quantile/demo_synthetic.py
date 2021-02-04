@@ -1,6 +1,9 @@
 import os
 import sys
 import importlib
+import torch
+import matplotlib.cm as cm
+import matplotlib.pyplot as plt
 
 if importlib.util.find_spec('torch_itl') is None:
     path_to_lib = os.getcwd()[:-15]
@@ -11,9 +14,7 @@ from torch_itl.kernel import Gaussian, LearnableGaussian
 from torch_itl.model import DecomposableIdentity
 from torch_itl.sampler import LinearSampler
 from torch_itl.datasets import import_data_toy_quantile
-import torch
-import matplotlib.pyplot as plt
-import matplotlib.cm as cm
+
 
 # %%
 # Defining a simple toy dataset:
@@ -26,7 +27,7 @@ m = 10
 
 plt.figure()
 plt.scatter(x_train, y_train, marker='.')
-plt.show()
+plt.show(block=False)
 
 # %%
 # Defining an ITL model, first without a learnable kernel
@@ -53,7 +54,7 @@ est.fit_alpha_gd(x_train, y_train, n_epochs=40,
 plt.figure()
 plt.title("Loss evolution with time")
 plt.plot(est.losses)
-plt.show()
+plt.show(block=False)
 best_loss = est.losses[-1]
 
 # Plotting the model on test points
@@ -67,7 +68,7 @@ plt.title("Conditional Quantiles output by our model")
 plt.scatter(x_train, y_train, marker='.')
 for i in range(30):
     plt.plot(x_test, y_pred[:, i], c=colors[i])
-plt.show()
+plt.show(block=False)
 
 # %%
 # Let's learn the input kernel with ITL
@@ -97,7 +98,7 @@ est.fit_kernel_input(x_train, y_train)
 plt.figure()
 plt.title("Loss evolution when learning the kernel")
 plt.plot(est.model.kernel_input.losses)
-plt.show()
+plt.show(block=False)
 
 # %%
 # Now retrain the parameters alpha of the model
@@ -109,7 +110,7 @@ est.fit_alpha_gd(x_train, y_train, n_epochs=40,
 plt.figure()
 plt.title("Loss evolution when learning model coefficients again")
 plt.plot(est.losses)
-plt.show()
+plt.show(block=False)
 
 y_pred = est.model.forward(x_test, probs).detach().numpy()
 colors = [cm.viridis(x.item()) for x in torch.linspace(0, 1, 30)]
@@ -118,7 +119,7 @@ plt.title('Conditional Quantiles with learned kernel')
 plt.scatter(x_train, y_train, marker='.')
 for i in range(30):
     plt.plot(x_test, y_pred[:, i], c=colors[i])
-plt.show()
+plt.show(block=False)
 
 print('Loss gain from learning the kernel: ',
       best_loss - est.losses[-1])

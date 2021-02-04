@@ -1,3 +1,1 @@
-from .decomposable import Decomposable, DecomposableIdentity
-
-del decomposable
+from .decomposable import Decomposable, DecomposableIdentity  # noqa
