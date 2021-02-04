@@ -23,6 +23,9 @@ from torch_itl.datasets import get_data_landmarks
 # ----------------------------------
 # Reading input/output data
 # ----------------------------------
+# Please replace those values with the right path to
+# the extracted landmarks on your computer.
+# See utils/README.md 
 path_to_rafd = '../../torch_itl/datasets/Rafd_Aligned/Rafd_LANDMARKS'
 path_to_kdef = '../../torch_itl/datasets/KDEF_Aligned/KDEF_LANDMARKS'
 # test of import
