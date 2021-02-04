@@ -1,5 +1,6 @@
 import torch
 
+
 class LinearSampler(object):
     'Linear sampling class'
 
@@ -16,6 +17,9 @@ class LinearSampler(object):
             if not hasattr(self, 'm'):
                 raise ValueError('No value given for m')
             else:
-                return torch.linspace(self.a + self.epsilon, self.b - self.epsilon, self.m).view(-1, 1)
+                return torch.linspace(
+                    self.a + self.epsilon, self.b - self.epsilon,
+                    self.m).view(-1, 1)
         else:
-            return torch.linspace(self.a + self.epsilon, self.b - self.epsilon, m).view(-1, 1)
+            return torch.linspace(
+                self.a + self.epsilon, self.b - self.epsilon, m).view(-1, 1)

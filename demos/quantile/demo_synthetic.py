@@ -41,13 +41,13 @@ lbda_cross = 0.01
 sampler = LinearSampler(0.1, 0.9, 10, 0)
 sampler.m = 10
 est = IQR(model, lbda, lbda_cross, sampler)
-#%%
+# %%
 # Learning the coefficients of the model
 print("Fitting the coefficients of the model")
 
 est.fit_alpha_gd(x_train, y_train, n_epochs=40,
-                        lr=0.001, line_search_fn='strong_wolfe')
-#%%
+                 lr=0.001, line_search_fn='strong_wolfe')
+# %%
 # Plotting the loss along learning
 
 plt.figure()
@@ -93,7 +93,7 @@ est.model.kernel_input = kernel_input
 est.fit_kernel_input(x_train, y_train)
 
 # plot the loss along learning the kernel
-#%%
+# %%
 plt.figure()
 plt.title("Loss evolution when learning the kernel")
 plt.plot(est.model.kernel_input.losses)
@@ -102,7 +102,7 @@ plt.show()
 # %%
 # Now retrain the parameters alpha of the model
 est.fit_alpha_gd(x_train, y_train, n_epochs=40,
-                        lr=0.01, line_search_fn='strong_wolfe')
+                 lr=0.01, line_search_fn='strong_wolfe')
 
 # plot the loss
 

@@ -10,7 +10,7 @@ def kron(matrix1, matrix2):
 
 
 class Decomposable(object):
-    """
+    r"""
     Implements a decomposable OVK: k_{X} k_{\Theta} A
     where A is a positive semi definite matrix
     """
