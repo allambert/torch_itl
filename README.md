@@ -25,7 +25,8 @@ Cite
 
 If you use this code, please cite the corresponding work:
 
-```@inproceedings{brault2019infinite,
+```
+@inproceedings{brault2019infinite,
   title={Infinite task learning in rkhss},
   author={Brault, Romain and Lambert, Alex and Szab{\'o}, Zolt{\'a}n and Sangnier, Maxime and d’Alch{\'e}-Buc, Florence},
   booktitle={The 22nd International Conference on Artificial Intelligence and Statistics},
