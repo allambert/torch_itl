@@ -25,7 +25,7 @@ from torch_itl.datasets import get_data_landmarks
 # ----------------------------------
 # Please replace those values with the right path to
 # the extracted landmarks on your computer.
-# See utils/README.md 
+# See utils/README.md
 path_to_rafd = '../../torch_itl/datasets/Rafd_Aligned/Rafd_LANDMARKS'
 path_to_kdef = '../../torch_itl/datasets/KDEF_Aligned/KDEF_LANDMARKS'
 # test of import
@@ -51,7 +51,7 @@ sampler = CircularEmoSampler()
 lbda = 2e-5
 # define the emotion transfer estimator
 est = EmoTransfer(model, lbda,  sampler, inp_emotion='joint')
-#%%
+# %%
 # ----------------------------------
 # Learning in the presence of missing data -KDEF
 # ----------------------------------
@@ -72,7 +72,7 @@ for kfold in range(10):
             test_losses_kdef[kfold, j, i // 7] = est.risk(data_test)
     print('done with kfold ', kfold)
 # %%
-#torch.save(test_losses_kdef, 'kdef_partial.pt')
+# torch.save(test_losses_kdef, 'kdef_partial.pt')
 # %%
 # ----------------------------------
 # Learning in the presence of missing data -Rafd
@@ -94,28 +94,33 @@ for kfold in range(1, 11):
             mask = (mask_level >= i)
             est.fit_partial(data_train, mask)
             test_losses_rafd[kfold - 1, j, i // 7] = est.risk(data_test)
-#%%
-#torch.save(test_losses_rafd, 'rafd_partial.pt')
-#%%
-idx_kdef = torch.arange(test_losses_kdef.shape[2]*m)[::7].float() / test_losses_kdef.shape[2] / m
+# %%
+# torch.save(test_losses_rafd, 'rafd_partial.pt')
+# %%
+idx_kdef = torch.arange(
+    test_losses_kdef.shape[2]*m)[::7].float() / test_losses_kdef.shape[2] / m
 idx_rafd = torch.arange(test_losses_rafd.shape[2]*m)[::7].float() / n/m
-#%%
+# %%
 mean_kdef = test_losses_kdef.mean(1).mean(0)
-max_kdef , _ = test_losses_kdef.mean(1).max(axis=0)
-min_kdef , _ = test_losses_kdef.mean(1).min(axis=0)
+max_kdef, _ = test_losses_kdef.mean(1).max(axis=0)
+min_kdef, _ = test_losses_kdef.mean(1).min(axis=0)
 
 mean_rafd = test_losses_rafd.mean(1).mean(0)
-max_rafd , _ = test_losses_rafd.mean(1).max(axis=0)
-min_rafd , _ = test_losses_rafd.mean(1).min(axis=0)
-#%%
+max_rafd, _ = test_losses_rafd.mean(1).max(axis=0)
+min_rafd, _ = test_losses_rafd.mean(1).min(axis=0)
+# %%
 plt.figure()
 plt.xlabel("% of missing data")
 plt.ylabel("$\log_{10}$ Test MSE")
-plt.plot(idx_kdef, torch.log(mean_kdef), c='black', label='KDEF mean', marker=',')
-plt.plot(idx_kdef, torch.log(min_kdef), c='black', label='KDEF min-max', linestyle='--')
+plt.plot(idx_kdef, torch.log(mean_kdef),
+         c='black', label='KDEF mean', marker=',')
+plt.plot(idx_kdef, torch.log(min_kdef), c='black',
+         label='KDEF min-max', linestyle='--')
 plt.plot(idx_kdef, torch.log(max_kdef), c='black', linestyle='--')
-plt.plot(idx_rafd, torch.log(mean_rafd), c='grey', label='RaFD mean', marker=',')
-plt.plot(idx_rafd, torch.log(min_rafd), c='grey', label='RaFD min-max', linestyle='--')
+plt.plot(idx_rafd, torch.log(mean_rafd),
+         c='grey', label='RaFD mean', marker=',')
+plt.plot(idx_rafd, torch.log(min_rafd), c='grey',
+         label='RaFD min-max', linestyle='--')
 plt.plot(idx_rafd, torch.log(max_rafd), c='grey', linestyle='--')
 plt.legend(loc='upper left')
 plt.savefig('partial_observation.pdf')

@@ -9,7 +9,8 @@ class EmoTransfer(VITL):
     'Emotion Transfer Using Vector-Valued Infinite Task Learning'
     """
 
-    def __init__(self, model, lbda, sampler, inp_emotion='joint', inc_emotion=True):
+    def __init__(self, model, lbda, sampler, inp_emotion='joint',
+                 inc_emotion=True):
         super().__init__(model, squared_norm, lbda, sampler)
         self.inp_emotion = inp_emotion
         self.inc_emotion = inc_emotion
@@ -137,10 +138,11 @@ class EmoTransfer(VITL):
 
         else:
             B = torch.inverse(self.model.A).numpy()
-            Q = (self.model.y_train.reshape(-1, self.model.output_dim)).numpy() @ B
-            alpha_np = solve_sylvester(self.model.G_xt,
-                                       self.lbda * self.model.n * self.model.m * B,
-                                       Q)
+            Q = (self.model.y_train.reshape(
+                -1, self.model.output_dim)).numpy() @ B
+            alpha_np = solve_sylvester(
+                self.model.G_xt, self.lbda * self.model.n * self.model.m * B,
+                Q)
             self.model.alpha = torch.from_numpy(
                 alpha_np).reshape(self.model.n, self.model.m, -1)
 
@@ -202,7 +204,8 @@ class EmoTransfer(VITL):
                 count = 0
                 for i in range(data.shape[0]):
                     for j in range(m):
-                        if mask[i, self.inp_emotion] and mask[i, j] and j!=self.inp_emotion:
+                        if (mask[i, self.inp_emotion] and mask[i, j] and
+                                j != self.inp_emotion):
                             output_mask[count, j] = True
                     count += 1
                 output_mask = output_mask[:, mask_m]
@@ -220,7 +223,8 @@ class EmoTransfer(VITL):
         if verbose:
             print("Solving the linear system")
 
-        tmp = self.model.G_xt + self.lbda * self.model.n * self.model.m * torch.eye(self.model.n * self.model.m)
+        tmp = self.model.G_xt + self.lbda * self.model.n * \
+            self.model.m * torch.eye(self.model.n * self.model.m)
         output_mask_ravel = output_mask.reshape(-1)
         tmp = tmp[output_mask_ravel][:, output_mask_ravel]
 
@@ -229,7 +233,6 @@ class EmoTransfer(VITL):
         self.model.alpha = torch.zeros(self.model.n, self.model.m, nf)
 
         self.model.alpha[output_mask] = alpha_sol
-
 
     def fit_dim_red(self, data, r, eigen=None, verbose=False):
         """
@@ -260,29 +263,33 @@ class EmoTransfer(VITL):
             print('Computing SVD of empirical covariance')
         cor = 1 / self.model.n * \
             self.model.y_train.reshape(
-                -1, self.model.output_dim).T @ self.model.y_train.reshape(-1, self.model.output_dim)
+                -1, self.model.output_dim).T @ self.model.y_train.reshape(
+                    -1, self.model.output_dim)
         u, d, v = torch.svd(cor)
 
         if verbose:
             print("Solving the associated linear system")
 
-        identity_r = torch.diag_embed(torch.Tensor([1 for i in range(r)] +
-                                                   [0 for i in range(self.model.output_dim - r)]))
+        identity_r = torch.diag_embed(
+            torch.Tensor([1 for i in range(r)] + [0 for i in range(
+                self.model.output_dim - r)]))
         proj_r = identity_r[:, :r]
 
         if eigen is None:
 
             gamma_r, _ = torch.solve(
-                self.model.y_train.reshape(-1, self.model.output_dim) @ v @ proj_r, tmp)
+                self.model.y_train.reshape(
+                    -1, self.model.output_dim) @ v @ proj_r, tmp)
             self.model.alpha = gamma_r @ proj_r.T @ v.T
             self.model.A = v @ identity_r @ v.T
 
         else:
             B = torch.inverse(torch.diag(eigen)).numpy()
-            Q = (self.model.y_train.reshape(-1, self.model.output_dim) @ v @ proj_r).numpy() @ B
-            gamma_r = solve_sylvester(self.model.G_xt,
-                                       self.lbda * self.model.n * self.model.m * B,
-                                       Q)
+            Q = (self.model.y_train.reshape(-1, self.model.output_dim)
+                 @ v @ proj_r).numpy() @ B
+            gamma_r = solve_sylvester(
+                self.model.G_xt, self.lbda * self.model.n * self.model.m * B,
+                Q)
             self.model.alpha = torch.from_numpy(
                 gamma_r) @ torch.diag(eigen) @ proj_r.T @ v.T
             self.model.A = v @ proj_r @ torch.diag(eigen) @ proj_r.T @ v.T

@@ -2,9 +2,7 @@
 # when using vITL by choosing A to be a non-invertible well chosen
 # matrix, built upon the empirical covariance matrix
 # Runtime ~1h on laptop
-# ----------------------------------
-# Imports
-# ----------------------------------
+
 import os
 import torch
 import matplotlib.pyplot as plt
@@ -26,7 +24,7 @@ from torch_itl.datasets import get_data_landmarks
 # ----------------------------------
 # Please replace those values with the right path to
 # the extracted landmarks on your computer.
-# See utils/README.md 
+# See utils/README.md
 path_to_rafd = '../../torch_itl/datasets/Rafd_Aligned/Rafd_LANDMARKS'
 path_to_kdef = '../../torch_itl/datasets/KDEF_Aligned/KDEF_LANDMARKS'
 # test of import
@@ -59,7 +57,8 @@ est = EmoTransfer(model, lbda,  sampler, inp_emotion='joint')
 print('Computing losses KDEF')
 losses_kdef = torch.zeros(10, nf)
 for kfold in range(10):
-    data_train, data_test = get_data_landmarks('KDEF', path_to_kdef, kfold=kfold)
+    data_train, data_test = get_data_landmarks(
+        'KDEF', path_to_kdef, kfold=kfold)
     for r in range(nf):
         est.fit_dim_red(data_train, r+1)
         losses_kdef[kfold, r] = est.risk(data_test)
@@ -69,8 +68,9 @@ for kfold in range(10):
 # ----------------------------------
 print('Computing losses RaFD')
 losses_rafd = torch.zeros(10, nf)
-for kfold in range(1,11):
-    data_train, data_test = get_data_landmarks('RaFD', path_to_rafd, kfold=kfold)
+for kfold in range(1, 11):
+    data_train, data_test = get_data_landmarks(
+        'RaFD', path_to_rafd, kfold=kfold)
     for r in range(nf):
         est.fit_dim_red(data_train, r+1)
         losses_rafd[kfold-1, r] = est.risk(data_test)
@@ -78,8 +78,8 @@ for kfold in range(1,11):
 # ----------------------------------
 # Saving the results
 # ----------------------------------
-#torch.save(losses_kdef,'dim_red_kdef.pt')
-#torch.save(losses_rafd,'dim_red_rafd.pt')
+# torch.save(losses_kdef,'dim_red_kdef.pt')
+# torch.save(losses_rafd,'dim_red_rafd.pt')
 # %%
 # ----------------------------------
 # Plotting
@@ -87,14 +87,16 @@ for kfold in range(1,11):
 std_rafd = ((losses_rafd - losses_rafd.mean(0))**2).mean(0).sqrt()
 std_kdef = ((losses_kdef - losses_kdef.mean(0))**2).mean(0).sqrt()
 plt.figure()
-plt.xlabel('Rank of $\mathbf{A}$')
+plt.xlabel(r'Rank of $\mathbf{A}$')
 plt.ylabel('Test MSE')
 plt.plot(losses_kdef.mean(0), c='black', label='KDEF mean', marker=',')
-plt.plot(losses_kdef.mean(0) + std_kdef, c='black', label='KDEF mean $\pm \sigma$', linestyle='--')
+plt.plot(losses_kdef.mean(0) + std_kdef, c='black',
+         label=r'KDEF mean $\pm \sigma$', linestyle='--')
 plt.plot(losses_kdef.mean(0) - std_kdef, c='black', linestyle='--')
-plt.plot(losses_rafd.mean(0), c= 'grey', label='RaFD mean', marker=',')
-plt.plot(losses_rafd.mean(0) + std_rafd, c= 'grey', label='RaFD mean $\pm \sigma$', linestyle='--')
-plt.plot(losses_rafd.mean(0) - std_rafd, c= 'grey', linestyle='--')
+plt.plot(losses_rafd.mean(0), c='grey', label='RaFD mean', marker=',')
+plt.plot(losses_rafd.mean(0) + std_rafd, c='grey',
+         label=r'RaFD mean $\pm \sigma$', linestyle='--')
+plt.plot(losses_rafd.mean(0) - std_rafd, c='grey', linestyle='--')
 
 plt.legend(loc='upper right')
 plt.savefig('dim_red.pdf')
