@@ -1,7 +1,8 @@
 torch_itl
 =========
 
-[![](https://github.com/allambert/torch_itl/workflows/build/badge.svg?branch=master)](https://github.com/allambert/torch_itl/actions?query=workflow%3Abuild)
+[![](https://github.com/allambert/torch_itl/workflows/build/badge.svg?branch=master)](https://github.com/allambert/torch_itl/actions?query=workflow%3Abuild) [![](https://codecov.io/gh/allambert/torch_itl/branch/master/graphs/badge.svg?branch=master)](https://codecov.io/gh/allambert/torch_itl)
+
 
 Algorithms for solving integral loss minimization problems. Currently, we handle the following problems:
 
