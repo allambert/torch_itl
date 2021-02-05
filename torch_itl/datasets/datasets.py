@@ -304,16 +304,27 @@ def get_data_landmarks(dataset, path_to_landmarks, kfold=0, random_seed=21):
     data_train, data_test
     '''
     if dataset == 'KDEF':
-        x_train, y_train, x_test, y_test, train_list, test_list = \
-            kdef_landmarks_facealigner(
-                path_to_landmarks, inp_emotion='AN', inc_emotion=True,
-                kfold=kfold, random_seed=random_seed)
+        try:
+            x_train, y_train, x_test, y_test, train_list, test_list = \
+                kdef_landmarks_facealigner(
+                    path_to_landmarks, inp_emotion='AN', inc_emotion=True,
+                    kfold=kfold, random_seed=random_seed)
+        except OSError:
+            raise Exception('Dataset folder appears to be empty, request'
+                            'download from https://www.kdef.se/'
+                            )
 
     elif dataset == 'RaFD':
-        x_train, y_train, x_test, y_test, train_list, test_list = \
-            rafd_landmarks_facealigner(
-                path_to_landmarks, inp_emotion='angry', inc_emotion=True,
-                kfold=kfold, random_seed=random_seed)
+        try:
+            x_train, y_train, x_test, y_test, train_list, test_list = \
+                rafd_landmarks_facealigner(
+                    path_to_landmarks, inp_emotion='angry', inc_emotion=True,
+                    kfold=kfold, random_seed=random_seed)
+        except OSError:
+            raise Exception('Dataset folder appears to be empty, request'
+                            'download from http://www.socsci.ru.nl:8180/'
+                            'RaFD2/RaFD'
+                            )
 
     else:
         raise Exception('Unknown dataset')
