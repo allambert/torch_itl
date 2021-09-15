@@ -15,7 +15,6 @@ from torch_itl.model import DecomposableIdentity
 from torch_itl.sampler import LinearSampler
 from torch_itl.datasets import import_data_toy_quantile
 
-
 # %%
 # Defining a simple toy dataset:
 

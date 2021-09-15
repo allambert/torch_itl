@@ -1,6 +1,7 @@
 import torch
 import time
 import torch.optim as optim
+import matplotlib.pyplot as plt
 
 
 class VITL(object):
@@ -260,3 +261,20 @@ class VITL(object):
             self.model.kernel_input.clear_memory()
         if self.model.kernel_output.is_learnable:
             self.model.kernel_output.clear_memory()
+
+    def plot_losses(self):
+        "Plots losses associated to the training of the model"
+        if not hasattr(self, 'losses'):
+            raise ValueError('No losses to plot')
+        n = len(self.losses)
+        plt.figure()
+        plt.subplot(211)
+        plt.title('Loss values along training')
+        plt.xlabel('Iteration')
+        plt.plot(self.losses)
+        plt.subplot(212)
+        plt.tight_layout()
+        plt.title('Loss values - end of training')
+        plt.xlabel('Iteration')
+        plt.plot([i for i in range(n-20, n)], self.losses[n-20:])
+        plt.show()

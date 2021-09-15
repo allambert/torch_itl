@@ -2,14 +2,32 @@ import sys
 import torch
 
 
-def proj(alpha, kappa):
+def proj_matrix_2(alpha, kappa):
     norm = torch.sqrt(torch.sum(alpha**2, axis=1))
     mask = torch.where(norm > kappa)
     alpha[mask] *= kappa / norm[mask].reshape((-1, 1))
     return alpha
 
 
-def bst(alpha, tau):
+def proj_matrix_inf(alpha, kappa):
+    norm = torch.abs(alpha)
+    return torch.where(norm > kappa, kappa * alpha/norm, alpha)
+
+def proj_vect_2(alpha, kappa):
+    norm = torch.sqrt(torch.sum(alpha**2))
+    if norm > kappa:
+        alpha *= kappa / norm
+    return(alpha)
+
+
+def proj_vect_inf(alpha, kappa):
+    norm = torch.abs(alpha)
+    mask = torch.where(norm > kappa)
+    alpha[mask] *= kappa / norm[mask].reshape((-1, 1))
+    return alpha
+
+
+def bst_matrix(alpha, tau):
     norm = (alpha**2).sum(1).sqrt()
     mask_st = torch.where(norm >= tau)
     mask_ze = torch.where(norm < tau)
@@ -19,7 +37,16 @@ def bst(alpha, tau):
     return(alpha)
 
 
-def iht(alpha, tau):
+def bst_vector(alpha, tau):
+    norm = (alpha**2).sum().sqrt()
+    if norm > tau:
+        alpha -= alpha/norm * tau
+    else:
+        alpha = 0
+    return(alpha)
+
+
+def st(alpha, tau):
     return torch.where(alpha.abs() - tau < 0,
                        torch.zeros_like(alpha),
                        alpha.abs() - tau) * torch.sign(alpha)
