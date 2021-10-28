@@ -1,9 +1,133 @@
+from abc import ABC, abstractmethod
 import torch
 import time
+from sklearn.exceptions import ConvergenceWarning
+
+
+
 from .utils import (squared_norm, proj_vect_2, proj_vect_inf, proj_matrix_2,
                     proj_matrix_inf, bst_matrix, bst_vector, st)
 from .vitl import VITL
 from sklearn.model_selection import KFold
+
+
+class FuncOR:
+    """Implements Functional Output Regression
+    """
+
+    def __init__(self, model, lbda):
+        self.model = model
+        self.lbda = lbda
+        self.losses = None
+    
+    @abstractmethod
+    def dual_loss_diff(self, alpha):
+        pass
+
+    @abstractmethod
+    def dual_grad(self, alpha):
+        pass
+
+    @abstractmethod
+    def prox_step(self, alpha, gamma=None):
+        pass
+
+    # To initialize computation of the eigen related quantities for eigen solver
+    @abstractmethod
+    def initialise_specifics(self):
+        pass
+
+    # Dimitri: dejà dit dans model mais c'est pas terrible d'initialiser des attributs de classe
+    # en dehors de la classe, dans le code j'ai déporté cette méthode initialise dans DecomposableIdentityScalar et DecomposableIntOp
+    # Pour que ça run avec le reste de ta librairie je ne l'ai pas fait ici mais je conseille 
+    def initialise(self, x, y, thetas, warm_start=True, requires_grad=True):
+        self.model.x_train = x
+        self.model.n = len(x)
+        self.model.m = len(thetas)
+        self.model.y_train = y
+        self.model.thetas = thetas
+        self.model.initialise(x, warm_start, requires_grad)
+        self.model.compute_gram_train()
+        self.initialise_specifics()
+    
+    def get_rescale_cste(self):
+        return self.lbda * self.model.n * self.model.m
+
+
+    def prox_gd_init(self, x, y, thetas, warm_start, reinit_losses=True):
+        self.initialise(x, y, thetas, warm_start=warm_start, requires_grad=False)
+        # Losses initialization
+        if self.losses is None:
+            self.losses = []
+        if reinit_losses:
+            self.losses = []
+        cste = self.get_rescale_cste()
+        return self.model.alpha.detach().clone() * cste
+    
+    def acc_prox_lsearch(self, t0, alpha_v, grad_v, beta=0.2):
+        t = t0
+        stop = False
+        while not stop:
+            alpha_plus = self.prox_step(alpha_v - t * grad_v, t)
+            term1 = self.dual_loss_diff(alpha_plus)
+            term21 = self.dual_loss_diff(alpha_v)
+            term22 = (grad_v * (alpha_plus - alpha_v)).sum()
+            term23 = 0.5 * (1 / t) * ((alpha_plus - alpha_v) ** 2).sum()
+            term2 = term21 + term22 + term23
+            if term1 > term2:
+                t *= beta
+            else:
+                stop = True
+        return t
+    
+    def fit_acc_prox_restart_gd(self, x, y, thetas, n_epoch=20000, warm_start=True, tol=1e-6, beta=0.8,
+                                monitor_loss=None, reinit_losses=True, d=20):
+        alpha = self.prox_gd_init(x, y, thetas, warm_start, reinit_losses=reinit_losses)
+        alpha_minus1 = alpha
+        alpha_minus2 = alpha
+        step_size = 1
+        epoch_restart = 0
+        converged = False
+        for epoch in range(0, n_epoch):
+            acc_cste = epoch_restart / (epoch_restart + 1 + d)
+            alpha_v = alpha_minus1 + acc_cste * (alpha_minus1 - alpha_minus2)
+            grad_v = self.dual_grad(alpha_v)
+            step_size = self.acc_prox_lsearch(step_size, alpha_v, grad_v, beta)
+            alpha_tentative = self.prox_step(alpha_v - step_size * grad_v, step_size)
+            if ((alpha_v - alpha_tentative) * (alpha_tentative - alpha_minus1)).sum() > 0:
+                print("RESTART")
+                epoch_restart = 0
+                grad_v = self.dual_grad(alpha_minus1)
+                step_size = self.acc_prox_lsearch(step_size, alpha_minus1, grad_v, beta)
+                alpha = self.prox_step(alpha_minus1 - step_size * grad_v, step_size)
+            else:
+                alpha = alpha_tentative
+            if monitor_loss:
+                self.losses.append(self.dual_loss_diff(alpha))
+            diff = (alpha - alpha_minus1).norm() / alpha_minus1.norm()
+            print(diff)
+            if diff < tol:
+                converged = True
+                break
+            alpha_minus2 = alpha_minus1.detach().clone()
+            alpha_minus1 = alpha.detach().clone()
+            epoch_restart += 1
+        # Scale alpha to match prediction formula
+        cste = self.get_rescale_cste()
+        self.model.alpha = alpha / cste
+        if not converged:
+            raise ConvergenceWarning("Maximum number of iteration reached")
+    
+    def predict(self, X, theta):
+        return self.model.forward(X, theta)
+
+    def risk(self, X, Y, thetas):
+        pred = self.predict(X, thetas)
+        return ((Y - pred) ** 2).mean()
+
+    def training_risk(self):
+        pred = self.predict(self.model.x_train, self.model.thetas)
+        return ((self.model.y_train - pred) ** 2).mean()
 
 
 class FOR(VITL):
@@ -201,6 +325,29 @@ class FOR(VITL):
             mse[i] = torch.Tensor(mse_local)
         lbda_argmin = mse.mean(1).argmin()
         return lbda_grid[lbda_argmin], mse.mean(1)[lbda_argmin], mse
+
+
+class FuncORSplines(FuncOR):
+
+    def __init__(self, model, lbda):
+        super().__init__(model, lbda)
+
+    def dual_loss_diff(self, alpha):
+        A = 0.5 * alpha @ alpha.T
+        B = - alpha @ self.model.y_train.T
+        cste = 0.5 / (self.lbda * self.model.n * self.model.m)
+        C = cste * self.model.G_x @ alpha @ self.model.G_t @ alpha.T
+        return torch.trace(A + B + C)
+
+    def dual_grad(self, alpha):
+        A = alpha
+        B = - self.model.y_train
+        cste = 1 / (self.lbda * self.model.n * self.model.m)
+        C = cste * self.model.G_x @ alpha @ self.model.G_t
+        return A + B + C
+
+    def prox_step(self, alpha, gamma=None):
+        return alpha
 
 
 class RobustFOR(FOR):
