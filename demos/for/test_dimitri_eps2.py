@@ -4,9 +4,11 @@ import matplotlib. pyplot as plt
 import matplotlib.cm as cm
 
 from torch_itl.datasets import SyntheticGPmixture
+from torch_itl.estimator.func_or import FuncOREigen
 from torch_itl.model import DecomposableIdentityScalar
 from torch_itl.kernel import Gaussian
-from torch_itl.estimator import FuncORSplines
+from torch_itl.estimator import FuncORSplines, Fun
+from torch_itl.model.decomposable import DecomposableIntOp
 
 # Torch default datatype
 torch.set_default_dtype(torch.float64)
@@ -56,3 +58,20 @@ test_esti.fit_acc_prox_restart_gd(Xtrain, Ytrain, thetas.view(-1, 1), n_epoch=20
 
 pred = test_esti.predict(Xtest, thetas.view(-1, 1))
 print(((pred - Ytest) ** 2).mean())
+
+test_esti.fit_sylvester(Xtrain, Ytrain, thetas.view(-1, 1))
+pred = test_esti.predict(Xtest, thetas.view(-1, 1))
+print(((pred - Ytest) ** 2).mean())
+
+
+test_mod_eig = DecomposableIntOp(kernel_input, kernel_output, n_eigen=25)
+lbda = 1e-7
+test_esti_eig = FuncOREigen(test_mod_eig, lbda)
+# test_esti.fit(Xtrain, Ytrain, thetas.view(-1, 1))
+test_esti_eig.fit_acc_prox_restart_gd(Xtrain, Ytrain, thetas.view(-1, 1), n_epoch=20000, warm_start=True, tol=1e-6, beta=0.8,
+                                  monitor_loss=None, reinit_losses=True, d=20)
+
+pred = test_esti_eig.predict(Xtest, thetas.view(-1, 1))
+print(((pred - Ytest) ** 2).mean())
+
+test_esti_eig.fit_sylvester(Xtrain, Ytrain, thetas.view(-1, 1))

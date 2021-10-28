@@ -364,13 +364,13 @@ class DecomposableIntOp():
             raise Exception('No training data provided')
         self.G_x = self.kernel_input.compute_gram(self.x_train)
     
-    def compute_eigen_output(self, thetas):
-        eig_vecs, eig_vals, _ = torch.svd(self.kernel_output.compute_gram(thetas))
-        self.eig_vecs = eig_vecs[:, :self.n_eig].T
-        self.eig_vals = eig_vals[:self.n_eig]
+    def compute_eigen_output(self):
+        eig_vecs, eig_vals, _ = torch.svd(self.kernel_output.compute_gram(self.thetas))
+        self.eig_vecs = eig_vecs[:, :self.n_eigen].T
+        self.eig_vals = eig_vals[:self.n_eigen]
 
-    def compute_R(self, y):
-        self.R = y @ self.eig_vecs.T
+    def compute_R(self):
+        self.R = self.y_train @ self.eig_vecs.T
 
     # def compute_R(self, thetas, y):
     #     d = thetas.shape[0]
