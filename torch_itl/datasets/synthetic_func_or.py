@@ -1,24 +1,21 @@
 import torch
 from sklearn.gaussian_process.kernels import RBF
 import numpy as np
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
-
-# %%
 
 
 class SyntheticGPmixture():
 
-    def __init__(self, n_atoms, gamma_cov, noise=[None, None], scale=2):
-        self.n_atoms = n_atoms
+    def __init__(self, gamma_cov=((0.05, 0.1, 0.5, 0.7), (0.05, 0.1, 0.5, 0.7)), 
+                 noise=(None, None), scale=2):
+        self.n_atoms = len(gamma_cov[0])
         self.gamma_cov_input = gamma_cov[0]
         self.gamma_cov_output = gamma_cov[1]
         self.noise_input = noise[0]
         self.noise_output = noise[1]
         self.scale = scale
 
-    def drawGP(self, t, seed=75):
-        np.random.seed(seed)
+    def drawGP(self, t, seed_gp=75):
+        np.random.seed(seed_gp)
         self.t = t.view(-1, 1)
         # draw GP input
         self.GP_input = torch.zeros(self.n_atoms, t.shape[0])
@@ -43,10 +40,11 @@ class SyntheticGPmixture():
             self.GP_output[i] = torch.from_numpy(
                 np.random.multivariate_normal(np.zeros(len(covmat)), covmat))
 
-    def sample(self, n_samples, new_GP=False, seed=75):
+    def sample(self, n_samples, new_GP=False, seed_gp=75, seed_coefs=765):
         if not hasattr(self, 'GP_input') or new_GP:
-            self.drawGP(self.t, seed)
-        coefficients = self.scale * (torch.rand(n_samples, self.n_atoms) - 0.5)
+            self.drawGP(self.t, seed_gp)
+        np.random.seed(seed_coefs)
+        coefficients = torch.from_numpy(self.scale * (np.random.rand(n_samples, self.n_atoms) - 0.5))
         X = coefficients @ self.GP_input
         Y = coefficients @ self.GP_output
         return X, Y
@@ -82,7 +80,7 @@ def synthetic_gaussian(n_samples, t, n_atoms=4, gamma_cov=[0.1, 0.1],
     return X, Y
 
 
-# %%
+
 # n = 20
 # t = torch.linspace(0, 1, 64)
 # n_atoms_list = [4, 8]
