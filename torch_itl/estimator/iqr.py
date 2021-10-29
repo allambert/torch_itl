@@ -10,7 +10,6 @@ class IQR(VITL):
     def __init__(self, model, lbda, lbda_cross, sampler):
         super().__init__(model, ploss_with_crossing(lbda_cross), lbda, sampler)
 
-
     def fit_alpha_sgd(self, x, y, n_epochs=500, warm_start=True, **kwargs):
         """
         Fits the parameters alpha of the model, based on the representer t

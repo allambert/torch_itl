@@ -2,4 +2,5 @@ numpy >= 1.18.1
 pandas
 scipy >= 1.4.1
 sklearn
+slycot
 torch >= 1.4.0

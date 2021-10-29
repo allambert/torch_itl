@@ -1,9 +1,7 @@
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 import torch
 from slycot import sb04qd
-import time
 from sklearn.exceptions import ConvergenceWarning
-
 
 
 from .utils import (squared_norm, proj_vect_2, proj_vect_inf, proj_matrix_2,
@@ -20,7 +18,7 @@ class FuncOR:
         self.model = model
         self.lbda = lbda
         self.losses = None
-    
+
     @abstractmethod
     def dual_loss_diff(self, alpha):
         pass
@@ -33,14 +31,14 @@ class FuncOR:
     def prox_step(self, alpha, gamma=None):
         pass
 
-    # To initialize computation of the eigen related quantities for eigen solver
+    # Initialize computation of the eigen related quantities for eigen solver
     @abstractmethod
     def initialise_specifics(self):
         pass
 
     # Dimitri: dejà dit dans model mais c'est pas terrible d'initialiser des attributs de classe
     # en dehors de la classe, dans le code j'ai déporté cette méthode initialise dans DecomposableIdentityScalar et DecomposableIntOp
-    # Pour que ça run avec le reste de ta librairie je ne l'ai pas fait ici mais je conseille 
+    # Pour que ça run avec le reste de ta librairie je ne l'ai pas fait ici mais je conseille
     def initialise(self, x, y, thetas, warm_start=True, requires_grad=True):
         self.model.x_train = x
         self.model.n = len(x)
@@ -50,7 +48,7 @@ class FuncOR:
         self.model.initialise(x, warm_start, requires_grad)
         self.model.compute_gram_train()
         self.initialise_specifics()
-    
+
     def get_rescale_cste(self):
         return self.lbda * self.model.n * self.model.m
 
@@ -63,7 +61,7 @@ class FuncOR:
             self.losses = []
         cste = self.get_rescale_cste()
         return self.model.alpha.detach().clone() * cste
-    
+
     def acc_prox_lsearch(self, t0, alpha_v, grad_v, beta=0.2):
         t = t0
         stop = False
@@ -79,7 +77,7 @@ class FuncOR:
             else:
                 stop = True
         return t
-    
+
     def fit_acc_prox_restart_gd(self, x, y, thetas, n_epoch=20000, warm_start=True, tol=1e-6, beta=0.8,
                                 monitor_loss=False, reinit_losses=True, d=20):
         alpha = self.prox_gd_init(x, y, thetas, warm_start, reinit_losses=reinit_losses)
@@ -117,7 +115,7 @@ class FuncOR:
         self.model.alpha = alpha / cste
         if not converged:
             raise ConvergenceWarning("Maximum number of iteration reached")
-    
+
     def predict(self, X, theta):
         return self.model.forward(X, theta)
 
@@ -128,10 +126,10 @@ class FuncOR:
     def training_risk(self):
         pred = self.predict(self.model.x_train, self.model.thetas)
         return ((self.model.y_train - pred) ** 2).mean()
-    
+
     def fit(self, x, y, thetas, n_epoch=20000, warm_start=True, tol=1e-6, beta=0.8,
             monitor_loss=False, reinit_losses=True, d=20):
-        self.fit_acc_prox_restart_gd(x, y, thetas, n_epoch, warm_start, tol, 
+        self.fit_acc_prox_restart_gd(x, y, thetas, n_epoch, warm_start, tol,
                                      beta, monitor_loss, reinit_losses)
 
 
@@ -156,14 +154,14 @@ class FuncORSplines(FuncOR):
 
     def prox_step(self, alpha, gamma=None):
         return alpha
-    
+
     def fit_sylvester(self, x, y, thetas):
         self.initialise(x, y, thetas, warm_start=False, requires_grad=False)
-        alpha = sb04qd(self.model.n, self.model.m, 
-                       self.model.G_x.numpy() / (self.lbda * self.model.n * self.model.m), 
+        alpha = sb04qd(self.model.n, self.model.m,
+                       self.model.G_x.numpy() / (self.lbda * self.model.n * self.model.m),
                        self.model.G_t.numpy(), y.numpy() / (self.lbda * self.model.n * self.model.m))
         self.model.alpha = torch.from_numpy(alpha)
-    
+
     def fit(self, x, y, thetas):
         self.fit_sylvester(x, y, thetas)
 
@@ -192,19 +190,19 @@ class FuncOREigen(FuncOR):
 
     def prox_step(self, alpha, gamma=None):
         return alpha
-    
+
     def initialise_specifics(self):
         self.model.compute_eigen_output()
         self.model.compute_R()
-    
+
     def fit_sylvester(self, x, y, thetas):
         self.initialise(x, y, thetas, warm_start=False, requires_grad=False)
         Lambda = torch.diag(self.model.eig_vals)
-        alpha = sb04qd(self.model.n, self.model.n_eigen, 
+        alpha = sb04qd(self.model.n, self.model.n_eigen,
                        self.model.G_x.numpy() / (self.lbda * self.model.n * self.model.m), Lambda.numpy(),
                        self.model.R.numpy() / (self.lbda * self.model.n * self.model.m))
         self.model.alpha = torch.from_numpy(alpha)
-    
+
     def fit(self, x, y, thetas):
         self.fit_sylvester(x, y, thetas)
 
@@ -227,7 +225,7 @@ class RobustFuncOREigen(FuncOREigen):
     #         alpha_sc = alpha
     #     pred = self.model.G_x @ alpha_sc @ torch.diag(self.model.eig_vals) @ self.model.eig_vecs
     #     return (1 / np.sqrt(m)) * torch.sqrt(((self.model.y_train - pred) ** 2).sum(dim=1)).max()
-    
+
     def fit_sylvester(self, x, y, thetas):
         raise ValueError("Sylvester solver only works for square loss, please use FISTA based solvers")
 
