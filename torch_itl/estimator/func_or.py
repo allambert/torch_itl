@@ -2,9 +2,8 @@ from abc import ABC, abstractmethod
 import torch
 from slycot import sb04qd
 import time
+import numpy as np
 from sklearn.exceptions import ConvergenceWarning
-
-
 
 from .utils import (squared_norm, proj_vect_2, proj_vect_inf, proj_matrix_2,
                     proj_matrix_inf, bst_matrix, bst_vector, st)
@@ -12,7 +11,7 @@ from .vitl import VITL
 from sklearn.model_selection import KFold
 
 
-class FuncOR:
+class FuncOR(ABC):
     """Implements Functional Output Regression
     """
 
@@ -34,7 +33,6 @@ class FuncOR:
         pass
 
     # To initialize computation of the eigen related quantities for eigen solver
-    @abstractmethod
     def initialise_specifics(self):
         pass
 
@@ -180,9 +178,6 @@ class FuncOREigen(FuncOR):
         C = cste * self.model.G_x @ alpha @ torch.diag(self.model.eig_vals) @ alpha.T
         return torch.trace(A + B + C)
 
-    def dual_loss_full(self, alpha):
-        return self.dual_loss_diff(alpha)
-
     def dual_grad(self, alpha):
         A = alpha
         B = - self.model.R
@@ -217,6 +212,19 @@ class RobustFuncOREigen(FuncOREigen):
 
     def prox_step(self, alpha, gamma=None):
         return proj_matrix_2(alpha, self.loss_param)
+    
+    def fit(self, x, y, thetas, init_sylvester=True, 
+            n_epoch=20000, warm_start=True, tol=1e-6, beta=0.8,
+            monitor_loss=False, reinit_losses=True, d=20):
+        """
+        init_sylvester will not work if warm_start is set to False
+        """
+        if init_sylvester:
+            self.fit_sylvester(x, y, thetas)
+            if not warm_start:
+                raise Warning("Initialization with Sylvester does not work if warm_start==False")
+        self.fit_acc_prox_restart_gd(x, y, thetas, n_epoch, warm_start, tol, beta, 
+                                     monitor_loss, reinit_losses, d)     
 
     # def get_kappa_max(self, alpha, rescale_alpha=False):
     #     n, m = self.model.alpha.shape[0], self.model.alpha.shape[1]
@@ -228,9 +236,158 @@ class RobustFuncOREigen(FuncOREigen):
     #     pred = self.model.G_x @ alpha_sc @ torch.diag(self.model.eig_vals) @ self.model.eig_vecs
     #     return (1 / np.sqrt(m)) * torch.sqrt(((self.model.y_train - pred) ** 2).sum(dim=1)).max()
     
-    def fit_sylvester(self, x, y, thetas):
-        raise ValueError("Sylvester solver only works for square loss, please use FISTA based solvers")
 
+class SparseFuncOREigen(FuncOREigen):
+
+    def __init__(self, model, lbda, loss_param=0.1):
+        super().__init__(model, lbda)
+        self.loss_param = loss_param
+
+    def prox_step(self, alpha, gamma=None):
+        return bst_matrix(alpha, gamma * np.sqrt(self.model.m) * self.loss_param)
+
+    def get_sparsity_level(self):
+        n_zeros = len(torch.where(self.model.alpha == 0)[0])
+        return n_zeros / (self.model.n_eigen * self.model.n)
+    
+    def fit(self, x, y, thetas, init_sylvester=True, 
+            n_epoch=20000, warm_start=True, tol=1e-6, beta=0.8,
+            monitor_loss=False, reinit_losses=True, d=20):
+        """
+        init_sylvester will not work if warm_start is set to False
+        """
+        if init_sylvester:
+            self.fit_sylvester(x, y, thetas)
+            if not warm_start:
+                raise Warning("Initialization with Sylvester does not work if warm_start==False")
+        self.fit_acc_prox_restart_gd(x, y, thetas, n_epoch, warm_start, tol, beta, 
+                                     monitor_loss, reinit_losses, d)     
+                                    
+
+class RobustFuncORSplines(FuncORSplines):
+
+    def __init__(self, model, lbda, loss_param=0.1, norm='inf'):
+        super().__init__(model, lbda)
+        self.loss_param = loss_param
+        self.norm = norm
+    
+    def primal_loss(self, alpha, rescale_alpha=True):
+        if rescale_alpha:
+            cste = 1 / self.get_rescale_cste()
+            alpha_sc = alpha * cste
+        else:
+            alpha_sc = alpha
+        pred = self.model.G_x @ alpha_sc @ self.model.G_t
+        if self.norm == "2":
+            raise ValueError("Primal loss not yet implement for 2 norm")
+        elif self.norm == "inf":
+            error = self.model.y_train - pred
+            error_norms = (1 / np.sqrt(self.model.m)) * torch.sqrt((error ** 2).sum(dim=1))
+            mask_sup_kappa = error_norms > self.loss_param
+            mask_inf_kappa = error_norms <= self.loss_param
+            term_sup_kappa = (self.loss_param * (mask_sup_kappa * (error_norms - 0.5 * self.loss_param))).sum()
+            term_inf_kappa = (0.5 * mask_inf_kappa * error_norms ** 2).sum()
+            data_fitting = (1 / self.model.n) * (term_inf_kappa + term_sup_kappa)
+        else:
+            raise ValueError('Not implemented norm')
+        regularization = (0.5 * self.lbda / self.model.m ** 2) \
+            * torch.trace(self.model.G_x @ alpha_sc @ self.model.G_t @ alpha_sc.T)
+        return data_fitting + regularization
+
+    def prox_step(self, alpha, gamma=None):
+        if self.norm == '2':
+            return proj_matrix_2(alpha, self.loss_param)
+        elif self.norm == 'inf':
+            return proj_matrix_inf(alpha, self.loss_param)
+        else:
+            raise ValueError('Not implemented norm')
+    
+    def fit(self, x, y, thetas, init_sylvester=True, 
+            n_epoch=20000, warm_start=True, tol=1e-6, beta=0.8,
+            monitor_loss=False, reinit_losses=True, d=20):
+        """
+        init_sylvester will not work if warm_start is set to False
+        """
+        if init_sylvester:
+            self.fit_sylvester(x, y, thetas)
+            if not warm_start:
+                raise Warning("Initialization with Sylvester does not work if warm_start==False")
+        self.fit_acc_prox_restart_gd(x, y, thetas, n_epoch, warm_start, tol, beta, 
+                                     monitor_loss, reinit_losses, d)     
+
+    # def get_kappa_max(self, alpha, rescale_alpha=True):
+    #     n, m = self.model.alpha.shape[0], self.model.alpha.shape[1]
+    #     if rescale_alpha:
+    #         cste = 1 / (self.lbda * self.model.n * self.model.m)
+    #         alpha_sc = alpha * cste
+    #     else:
+    #         alpha_sc = alpha
+    #     pred = self.model.G_x @ alpha_sc @ self.model.G_t
+    #     if self.norm == '2':
+    #         return (1 / np.sqrt(m)) * torch.sqrt(((self.model.y_train - pred) ** 2).sum(dim=1)).max()
+    #     elif self.norm == 'inf':
+    #         return (self.model.y_train - pred).abs().max()
+    #     else:
+    #         raise ValueError('Not implemented norm')
+
+
+class SparseFuncORSplines(FuncORSplines):
+
+    def __init__(self, model, lbda, loss_param=0.1, norm='inf'):
+        super().__init__(model, lbda)
+        self.loss_param = loss_param
+        self.norm = norm
+
+    def dual_loss_full(self, alpha):
+        if self.norm == "2":
+            dual_penalty = np.sqrt(self.model.m) * self.model.alpha.norm(dim=1).sum()
+        elif self.norm == "inf":
+            dual_penalty = alpha.abs().sum()
+        else:
+            raise ValueError('Not implemented norm')
+        return self.dual_loss_diff(alpha) + self.loss_param * dual_penalty
+
+    def primal_loss(self, alpha, rescale_alpha=True):
+        if rescale_alpha:
+            cste = 1 / self.get_rescale_cste()
+            alpha_sc = alpha * cste
+        else:
+            alpha_sc = alpha
+        error = self.model.y_train - self.model.G_x @ alpha_sc @ self.model.G_t
+        if self.norm == "2":
+            error_norms = (1 / np.sqrt(self.model.m)) * torch.sqrt((error ** 2).sum(dim=1))
+            data_fitting = error_norms.mean()
+        elif self.norm == "inf":
+            abs_error = error.abs()
+            data_fitting = (torch.maximum(abs_error, torch.tensor(self.loss_param)) ** 2).mean()
+        else:
+            raise ValueError('Not implemented norm')
+        regularization = (0.5 * self.lbda / self.model.m ** 2) \
+            * torch.trace(self.model.G_x @ alpha_sc @ self.model.G_t @ alpha_sc.T)
+        return data_fitting + regularization
+
+    def prox_step(self, alpha, gamma=None):
+        if self.norm == '2':
+            return bst_matrix(alpha, gamma * np.sqrt(self.model.m) * self.loss_param)
+        elif self.norm == 'inf':
+            return st(alpha, gamma * self.loss_param)
+    
+    def fit(self, x, y, thetas, init_sylvester=True, 
+            n_epoch=20000, warm_start=True, tol=1e-6, beta=0.8,
+            monitor_loss=False, reinit_losses=True, d=20):
+        """
+        init_sylvester will not work if warm_start is set to False
+        """
+        if init_sylvester:
+            self.fit_sylvester(x, y, thetas)
+            if not warm_start:
+                raise Warning("Initialization with Sylvester does not work if warm_start==False")
+        self.fit_acc_prox_restart_gd(x, y, thetas, n_epoch, warm_start, tol, beta, 
+                                     monitor_loss, reinit_losses, d)    
+
+    def get_sparsity_level(self):
+        n_zeros = len(torch.where(self.model.alpha == 0)[0])
+        return n_zeros / (self.model.m * self.model.n)
 
 # class FOR(VITL):
 #     """Implements Functional Output Regression
