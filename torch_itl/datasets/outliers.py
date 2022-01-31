@@ -1,4 +1,66 @@
 import torch
+import numpy as np
+
+from .synthetic_func_or import SyntheticGPmixture
+
+
+def add_type1_outliers(X, freq_sample=0.02, seed=443, coef=-1.,
+                       alternate_coef=False):
+    n, m = X.shape
+    res = X.detach().clone()
+    n_contaminated = int(freq_sample * n)
+    np.random.seed(seed)
+    contaminated_inds = torch.from_numpy(np.random.choice(np.arange(n),
+                                                          n_contaminated,
+                                                          replace=False))
+    ind_shift = contaminated_inds.flip(0)
+    if alternate_coef:
+        coef = torch.tensor([(-1) ** i * coef for i in range(n_contaminated)]
+                            ).unsqueeze(1)
+    res[contaminated_inds] = coef * X[ind_shift]
+    return res
+
+
+def add_type2_outliers(X, freq_sample=0.02, seed=443, seed_gps=56,
+                       covs_params=(0.01, 0.05, 1, 4), scale=2, intensity=2.5,
+                       additive=True):
+    n, m = X.shape
+    res = X.detach().clone()
+    theta = torch.linspace(0, 1, m)
+    gp_outliers = SyntheticGPmixture(len(covs_params),
+                                     (covs_params, covs_params),
+                                     noise=(None, None), scale=scale)
+    gp_outliers.drawGP(theta, seed_gp=seed_gps)
+    n_contaminated = int(freq_sample * n)
+    _, drawns_gps = gp_outliers.sample(n_contaminated, new_GP=False,
+                                       seed_gp=seed_gps, seed_coefs=seed)
+    np.random.seed(seed)
+    contaminated_inds = torch.from_numpy(np.random.choice(np.arange(n),
+                                                          n_contaminated,
+                                                          replace=False))
+    if additive:
+        res[contaminated_inds] += intensity * drawns_gps
+    else:
+        res[contaminated_inds] = intensity * drawns_gps
+    return res
+
+
+def add_type3_outliers(X, freq_sample=1., freq_loc=0.1, intensity=0.5,
+                       seed=453):
+    n, m = X.shape
+    res = X.detach().clone()
+    a_max = (X.abs().max()) * intensity
+    n_contaminated = int(freq_sample * n)
+    np.random.seed(seed)
+    contaminated_inds = np.random.choice(np.arange(n),
+                                         n_contaminated, replace=False)
+    for i in contaminated_inds:
+        m_contaminated = int(freq_loc * m)
+        contaminated_locs = np.random.choice(np.arange(m),
+                                             m_contaminated, replace=False)
+        noise = np.random.uniform(- a_max.item(), a_max.item(), m_contaminated)
+        res[i, contaminated_locs] = torch.from_numpy(noise)
+    return res
 
 
 def add_local_outliers(X, freq_sample=0.5, freq_loc=0.2, std=0.3):

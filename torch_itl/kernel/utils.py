@@ -1,8 +1,10 @@
+"""Utilitary functions for the kernel classes."""
 import torch
 
 
 def rbf_kernel(X, Y=None, gamma=None):
-    """Compute rbf Gram matrix between X and Y (or X)
+    """Compute rbf Gram matrix between X and Y (or X).
+
     courtesy of plaforgue
     Parameters
     ----------
@@ -33,4 +35,20 @@ def rbf_kernel(X, Y=None, gamma=None):
 
 
 def get_anchors_gaussian_rff(dim_input, dim_rff, gamma):
-    return gamma * torch.randn(dim_input, dim_rff)
+    """Compute rff anchors for Gaussian kernel.
+
+    Parameters
+    ----------
+    dim_input: int
+       Dimension of the input to the kernel
+    dim_rff: int
+       Number of anchors
+    gamma: float
+           Gamma parameter of the kernel (see sklearn implementation)
+    Returns
+    -------
+    anchors: torch.Tensor of shape (dim_input, dim_rff)
+       RFF anchors for Gaussian kernel
+    """
+    anchors = 1/gamma * torch.randn(dim_input, dim_rff)
+    return anchors

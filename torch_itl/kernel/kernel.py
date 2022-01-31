@@ -1,11 +1,29 @@
+"""Implement various kernels."""
 import torch
 from .utils import rbf_kernel, get_anchors_gaussian_rff
 from math import pi
+from abc import ABC, abstractmethod
 
 
-class Gaussian(object):
+class Kernel(ABC):
+    """Abstract class of kernel."""
+
+    @abstractmethod
+    def __init__(self):
+        """Empty init for abstract class."""
+        pass
+
+    @abstractmethod
+    def compute_gram(self, X, Y=None):
+        """Empty compute_gram for abstract class."""
+        pass
+
+
+class Gaussian(Kernel):
+    """Implement Gaussian kernel."""
 
     def __init__(self, gamma):
+        """Abstract class of kernel."""
         self.gamma = gamma
         self.is_learnable = False
 
@@ -13,7 +31,7 @@ class Gaussian(object):
         return rbf_kernel(X, Y, self.gamma)
 
 
-class GaussianSum(object):
+class GaussianSum(Kernel):
 
     def __init__(self, gamma):
         self.gamma = gamma
@@ -31,7 +49,7 @@ class GaussianSum(object):
         return G
 
 
-class GaussianRFF(object):
+class GaussianRFF(Kernel):
 
     def __init__(self, dim_input, dim_rff, gamma):
         self.dim_rff = dim_rff
@@ -84,7 +102,8 @@ class GaussianRFF(object):
         phi_Y = self.feature_map(Y)
         return phi_X @ phi_Y
 
-class Laplacian(object):
+
+class Laplacian(Kernel):
 
     def __init__(self, gamma):
         self.gamma = gamma
@@ -102,7 +121,7 @@ class Laplacian(object):
         return G
 
 
-class LaplacianSum(object):
+class LaplacianSum(Kernel):
 
     def __init__(self, gamma):
         self.gamma = gamma
@@ -116,10 +135,12 @@ class LaplacianSum(object):
         G = torch.zeros(n_i, n_o)
         for i in range(n_i):
             for j in range(n_o):
-                G[i, j] = torch.exp(-self.gamma * torch.abs(X[i] - Y[j])).mean()
+                G[i, j] = torch.exp(-self.gamma *
+                                    torch.abs(X[i] - Y[j])).mean()
         return G
 
-class Linear(object):
+
+class Linear(Kernel):
 
     def __init__(self):
         self.is_learnable = False
@@ -130,7 +151,7 @@ class Linear(object):
         return X @ Y.T
 
 
-class Harmonic(object):
+class Harmonic(Kernel):
 
     def __init__(self, m):
         self.m = m
@@ -160,68 +181,3 @@ class Harmonic(object):
             s[2 * i] = 1 / (1 + i)**2
             s[2 * i + 1] = 1 / (1 + i)**2
         return s
-
-# from math import pi
-#
-# def f(c):
-#     return torch.cos(c)/torch.sin(c) - 0.5*(c - 1/c)
-#
-#
-# def df(c):
-#     return -1/torch.sin(c)**2 -0.5 -1/c**2
-#
-#
-# def newton(f, df, c, n_epochs):
-#     for i in range(n_epochs):
-#         c -= f(c)/df(c)
-#     return c
-#
-#
-# def dichotomy(f, c, n_epochs):
-#     if n_epochs == 0:
-#         return c
-#     else:
-#         tmp = f(0.5*(c[0] + c[1]))
-#         if tmp > 0:
-#             c[1] = 0.5*(c[0] + c[1])
-#         else:
-#             c[0] = 0.5*(c[0] + c[1])
-#         print(c)
-#         return dichotomy(f, c, n_epochs - 1)
-#
-#
-# # %%
-# c = torch.Tensor([k*pi + 0.001 for k in range(50)])
-# locs = newton(f, df, c, 100000)
-# f(locs)
-# locs
-# eigen = 2/(1 + locs**2)
-# eigen
-#
-# def compute_psi(thetas):
-#     d = thetas.shape[0]
-#     psi = torch.zeros(100, d)
-#     c = torch.sqrt(torch.Tensor([2]))
-#     for i in range(self.m//2):
-#         for j in range(d):
-#             psi[2*i, j] = c * torch.cos(pi * 2 * i * thetas[j])
-#             psi[2 * i + 1, j] = c * torch.sin(pi * 2 * i * thetas[j])
-#     return(psi.T)
-#
-#
-# def psi(mu):
-#     def _psi(x):
-#         return mu*torch.cos(mu*x) + torch.sin(mu*x)
-#     return _psi
-#
-# (psi(locs[0])(torch.linspace(0, 1, 100000))**2).mean()
-#
-# (psi(locs[3])(torch.linspace(0, 1, 100000))*psi(locs[0])(torch.linspace(0, 1, 100000))).mean()
-#
-# locs[0]**2 + locs[0]/4*torch.sin(2*locs[0]) - 1/4*torch.cos(2*locs[0]) +0.5 - 1/4/locs[0]*torch.sin(2*locs[0])
-# # %%
-# c = torch.linspace(0, 50, 10000)
-# plt.figure()
-# plt.plot(c, f(c))
-# plt.ylim(-10, 10)
-# plt.show()

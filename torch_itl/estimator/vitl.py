@@ -1,3 +1,4 @@
+"""Implement the VITL class."""
 import torch
 import time
 import torch.optim as optim
@@ -5,7 +6,8 @@ import matplotlib.pyplot as plt
 
 
 class VITL(object):
-    """Implements VITL
+    """Implement VITL.
+
     It is a vectorial outputs extension to ITL, proposed in
     'Infinite Task Learning in RKHSs'
     """
@@ -138,7 +140,7 @@ class VITL(object):
         self.model.thetas = self.sampler.sample(self.model.m)
         self.model.n = n
 
-        self.model.initialise(x, warm_start)
+        self.model.initialize(x, warm_start, requires_grad=True)
 
         if not hasattr(self, 'losses'):
             self.losses = []

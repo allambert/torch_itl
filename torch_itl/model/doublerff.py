@@ -1,37 +1,42 @@
+"""Implement the double RFF model."""
 import torch
 
 
-def kron(matrix1, matrix2):
-    return torch.ger(
-        matrix1.view(-1),
-        matrix2.view(-1)).reshape(*(matrix1.size() + matrix2.size())).permute(
-        [0, 2, 1, 3]).reshape(matrix1.size(0) * matrix2.size(0),
-                              matrix1.size(1) * matrix2.size(1))
-
-
 class DoubleRFF(object):
-    r"""
-    Implements a decomposable OVK: \tilde{k}_{X} \tilde{k}_{\Theta} where
+    r"""Implement a decomposable OVK: \tilde{k}_{X} \tilde{k}_{\Theta}.
+
+    Both \tilde{k}_{X} and \tilde{k}_{\Theta} are Random Fourier Features
+    approximations of some kernel.
     """
 
     def __init__(self, kernel_input, kernel_output):
+        r"""Initialize the kernel.
+
+        Parameters
+        ----------
+        kernel_input:  torch_itl.Kernel
+            Input RFF kernel \tilde{k}_{X}
+        kernel_output:  torch_itl.Kernel
+            Output RFF kernel \tilde{k}_{\Theta}
+        Returns
+        -------
+        nothing
+        """
         self.kernel_input = kernel_input
         self.kernel_output = kernel_output
 
-
     def forward(self, x, thetas):
-        """
-        Computes the prediction of the model on specific data
+        r"""Compute the prediction of the model on data (x, thetas).
+
         Parameters
         ----------
         x:  torch.Tensor of shape (n_samples, n_features_1)
-            Input vector of samples used in the empirical risk
+            Input tensor of data
         thetas: torch.Tensor of shape (n_anchors, n_features_2)
-            Locations associated to the sampled empirical risk
-            default: locations used when learning
+            Locations in the $\Theta$ space
         Returns
         -------
-        pred: torch.Tensor of shape (n_samples, n_anchors, self.output_dim)
+        pred: torch.Tensor of shape (n_samples, n_anchors)
             prediction of the model
         """
         phi_x = self.kernel_input.feature_map(x)
@@ -41,18 +46,27 @@ class DoubleRFF(object):
         return pred
 
     def partial_derivative(self, x, thetas):
-        """
-        # TODO:
+        r"""Compute the partial derivative of the model w.r.t theta.
+
+        Parameters
+        ----------
+        x:  torch.Tensor of shape (n_samples, n_features_1)
+            Input tensor of data
+        thetas:  torch.Tensor of shape (n_anchors, n_features_2)
+            Locations in the $\Theta$ space
+        Returns
+        -------
+        partial:  torch.Tensor of shape (n_samples, n_anchors)
+            Input tensor of data
         """
         phi_x = self.kernel_input.feature_map(x)
         d_phi_theta = self.kernel_output.d_feature_map(thetas)
-        pred = (phi_x @ self.alpha @ d_phi_theta.T)
-        return(pred)
+        partial = (phi_x @ self.alpha @ d_phi_theta.T)
+        return(partial)
 
     def vv_norm(self, cpt_gram=True):
-        """
-        Computes the vv-RKHS norm of the model with parameters alpha
-        given by the representer theorem
+        """Compute the vv-RKHS norm of the model.
+
         Parameters
         ----------
         cpt_gram: torch.bool
@@ -66,41 +80,20 @@ class DoubleRFF(object):
         res = torch.trace(self.alpha @ self.alpha.T)
         return res
 
-    def initialise(self, x, warm_start):
-        """
-        Initializes the parameters alpha given by the representer theorem
+    def initialize(self, warm_start, requires_grad=False):
+        """Initialize the parameters alpha.
+
         Parameters
         ----------
-        x:  torch.Tensor of shape (n_samples, n_features_1)
-            Input tensor of training data used in the empirical risk
         warm_start: torch.bool
-            keeps previous alpha if true
+            Keeps previous alpha if true
+        requires_grad: torch.bool
+            Use if solver is based on autodiff later on
         Returns
         -------
         None
         """
-        self.x_train = x
         if not hasattr(self, 'alpha') or not warm_start:
             self.alpha = torch.randn(
-                (2*self.kernel_input.dim_rff, 2*self.kernel_output.dim_rff), requires_grad=True)
-
-    def test_mode(self, x, thetas, alpha):
-        """
-        Loads a model with x,thetas,alpha as in the representer theorem
-        Parameters
-        ----------
-        x:  torch.Tensor of shape (n_samples, n_features_1)
-            Input tensor of training data used in the empirical risk
-        thetas: torch.Tensor of shape (n_anchors, n_features_2)
-            Locations associated to the sampled empirical risk
-            default: locations used when learning
-        alpha: torch.Tensor of shape (n_samples, n_features_1, self.output_dim)
-        Returns
-        -------
-        None
-        """
-        self.n = x.shape[0]
-        self.m = thetas.shape[0]
-        self.x_train = x
-        self.thetas = thetas
-        self.alpha = alpha
+                (2*self.kernel_input.dim_rff, 2*self.kernel_output.dim_rff),
+                requires_grad)

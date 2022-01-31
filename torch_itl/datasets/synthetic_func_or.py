@@ -1,11 +1,15 @@
 import torch
 from sklearn.gaussian_process.kernels import RBF
 import numpy as np
+# De-comment imports if trying the class in Hydrogen
+# import matplotlib.cm as cm
+# import matplotlib.pyplot as plt
 
 
 class SyntheticGPmixture():
 
-    def __init__(self, gamma_cov=((0.05, 0.1, 0.5, 0.7), (0.05, 0.1, 0.5, 0.7)), 
+    def __init__(self,
+                 gamma_cov=((0.05, 0.1, 0.5, 0.7), (0.05, 0.1, 0.5, 0.7)),
                  noise=(None, None), scale=2):
         self.n_atoms = len(gamma_cov[0])
         self.gamma_cov_input = gamma_cov[0]
@@ -44,7 +48,9 @@ class SyntheticGPmixture():
         if not hasattr(self, 'GP_input') or new_GP:
             self.drawGP(self.t, seed_gp)
         np.random.seed(seed_coefs)
-        coefficients = torch.from_numpy(self.scale * (np.random.rand(n_samples, self.n_atoms) - 0.5))
+        coefficients = torch.from_numpy(self.scale *
+                                        (np.random.rand(n_samples,
+                                                        self.n_atoms) - 0.5))
         X = coefficients @ self.GP_input
         Y = coefficients @ self.GP_output
         return X, Y
@@ -79,8 +85,7 @@ def synthetic_gaussian(n_samples, t, n_atoms=4, gamma_cov=[0.1, 0.1],
 
     return X, Y
 
-
-
+# Test of above class
 # n = 20
 # t = torch.linspace(0, 1, 64)
 # n_atoms_list = [4, 8]

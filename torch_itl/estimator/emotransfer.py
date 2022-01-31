@@ -15,7 +15,7 @@ class EmoTransfer(VITL):
         self.inp_emotion = inp_emotion
         self.inc_emotion = inc_emotion
 
-    def initialise(self, data):
+    def initialize(self, data):
         """
         Transforms data into suitable x_train, y_train for which
         the Ridge Regression is performed, set emotion anchors,
@@ -122,7 +122,7 @@ class EmoTransfer(VITL):
         """
         if verbose:
             print('Initialize data')
-        self.initialise(data)
+        self.initialize(data)
         self.model.compute_gram_train()
 
         if verbose:
@@ -253,7 +253,7 @@ class EmoTransfer(VITL):
         """
         if verbose:
             print('Computing Gram matrices')
-        self.initialise(data)
+        self.initialize(data)
         self.model.compute_gram_train()
 
         tmp = self.model.G_xt + self.lbda * self.model.n * self.model.m * \
