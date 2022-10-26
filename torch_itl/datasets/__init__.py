@@ -4,3 +4,4 @@ from .outliers import (add_local_outliers, add_global_outliers_worse, # noqa
                        add_global_outliers_linear, add_type1_outliers,
                        add_type2_outliers, add_type3_outliers)
 from .synthetic_func_or import synthetic_gaussian, SyntheticGPmixture # noqa
+from .synthetic_style import SyntheticTriangles # noqa

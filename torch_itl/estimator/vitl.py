@@ -13,14 +13,15 @@ class VITL(object):
     """
 
     def __init__(self, model, cost, lbda, sampler):
+        """Initialize the estimator's parameters."""
         self.model = model
         self.cost = cost
         self.lbda = lbda
         self.sampler = sampler
 
     def predict(self, x, thetas=None):
-        """
-        Computes the prediction of the estimator on specific data
+        """Compute the prediction of the estimator on specific data.
+
         Parameters
         ----------
         x: torch.Tensor of shape (n_samples, n_features_1)
@@ -41,9 +42,10 @@ class VITL(object):
         return self.model.forward(x, thetas)
 
     def objective(self, x, y, thetas):
-        """
-        Computes the objective function associated to the
-        regularized vITL problem
+        """Compute the objective function.
+
+        The objective function is the one associated to the
+        regularized vITL problem.
         Parameters
         ----------
         x: torch.Tensor of shape (n_samples, n_features_1)
@@ -67,8 +69,8 @@ class VITL(object):
         return obj
 
     def risk(self, x, y, thetas=None):
-        """
-        Computes the empirical risk of the estimator on specific data
+        """Compute the empirical risk of the estimator on specific data.
+
         Parameters
         ----------
         x: torch.Tensor of shape (n_samples, n_features_1)
@@ -92,8 +94,8 @@ class VITL(object):
         return self.cost(y, pred, thetas)
 
     def training_risk(self):
-        """
-        Computes the empirical risk of the estimator on training data
+        """Compute the empirical risk of the estimator on training data.
+
         Parameters
         ----------
         None
@@ -108,9 +110,10 @@ class VITL(object):
 
     def fit_alpha_gd(self, x, y, n_epochs=500, solver=torch.optim.LBFGS,
                      warm_start=True, **kwargs):
-        """
-        Fits the parameters alpha of the model, based on the representer t
-        heorem with gradient descent
+        """Fit the parameters alpha of the model.
+
+        The fit is based on the representer theorem with gradient descent
+        allowed by pytorch autodiff functionality.
 
         Parameters
         ----------
@@ -163,9 +166,9 @@ class VITL(object):
             optimizer_alpha.step(closure_alpha)
 
     def fit_kernel_input(self, x, y, n_epochs=150):
-        """
-        Fits the parameters of the neural network associated to the input
-        kernel (deep kernel learning) with gradient descent
+        """Fit the parameters of the neural net associated to the input kernel.
+
+        See "deep kernel learning". This is done with gradient descent.
         Parameters
         ----------
         x: torch.Tensor of shape (n_samples, n_features_1)
@@ -210,9 +213,9 @@ class VITL(object):
             optimizer_kernel.step(closure_kernel)
 
     def fit_kernel_output(self, x, y, n_epochs=150):
-        """
-        Fits the parameters of the neural network associated to the output
-        kernel (deep kernel learning)
+        """Fit the parameters of the neural net associated to the output kernel.
+
+        See "deep kernel learning". This is done with gradient descent.
         Parameters
         ----------
         x: torch.Tensor of shape (n_samples, n_features_1)
@@ -257,7 +260,7 @@ class VITL(object):
             optimizer_kernel.step(closure_kernel)
 
     def clear_memory(self):
-        "Clears memory of the model"
+        """Clear memory of the model."""
         self.losses, self.times = [], []
         if self.model.kernel_input.is_learnable:
             self.model.kernel_input.clear_memory()
@@ -265,7 +268,7 @@ class VITL(object):
             self.model.kernel_output.clear_memory()
 
     def plot_losses(self):
-        "Plots losses associated to the training of the model"
+        """Plot losses associated to the training of the model."""
         if not hasattr(self, 'losses'):
             raise ValueError('No losses to plot')
         n = len(self.losses)

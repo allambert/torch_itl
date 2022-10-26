@@ -54,7 +54,7 @@ class FuncOR(ABC):
         return self.lbda * self.model.n * self.model.m
 
     def prox_gd_init(self, x, y, thetas, warm_start, reinit_losses=True):
-        self.initialize(x, y, thetas, warm_start=warm_start, requires_grad=False)
+        self.initialize(x, y, thetas, warm_start=warm_start)
         # Losses initialization
         if self.losses is None:
             self.losses = []

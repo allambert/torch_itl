@@ -33,4 +33,4 @@ class IQR(VITL):
         Nothing
         """
         n = x.shape[0]
-        self.model.initialise(x, warm_start)
+        self.model.initialize(x, warm_start)

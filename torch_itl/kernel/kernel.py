@@ -9,11 +9,6 @@ class Kernel(ABC):
     """Abstract class of kernel."""
 
     @abstractmethod
-    def __init__(self):
-        """Empty init for abstract class."""
-        pass
-
-    @abstractmethod
     def compute_gram(self, X, Y=None):
         """Empty compute_gram for abstract class."""
         pass

@@ -1,15 +1,14 @@
 """Implement various decomposable models in the vv-RKHS family."""
-
-from abc import ABC
 from scipy.interpolate import interp1d
 import torch
-from.utils import kron
+from .utils import kron
+from abc import ABC, abstractmethod
 
 
-class Decomposable(ABC):
+class Decomposable(object):
     r"""Implement a decomposable OVK.
 
-    The associated kernel is : K = k_{X} k_{\Theta} A with A psd.
+    The associated kernel is : K = k_{\mathcal{X}} k_{\Theta} A with A psd.
     """
 
     def __init__(self, kernel_input, kernel_output, A):
@@ -18,11 +17,11 @@ class Decomposable(ABC):
         Parameters
         ----------
         kernel_input:  torch_itl.Kernel
-            Input kernel k_{X}
+            Input kernel k_{\mathcal{X}}
         kernel_output:  torch_itl.Kernel
             Output kernel k_{\Theta}
         A:  torch.Tensor of shape (output_dim, output_dim)
-            Input kernel k_{X}
+            Input kernel k_{\mathcal{X}}
         Returns
         -------
         nothing
@@ -162,7 +161,7 @@ class DecomposableIdentity(Decomposable):
         Parameters
         ----------
         kernel_input:  torch_itl.Kernel
-            Input kernel k_{X}
+            Input kernel k_{\mathcal{X}}
         kernel_output:  torch_itl.Kernel
             Output kernel k_{\Theta}
         d:  int
@@ -174,7 +173,7 @@ class DecomposableIdentity(Decomposable):
         super().__init__(kernel_input, kernel_output, torch.eye(d))
 
 
-class DecomposableIdentityScalar(ABC):
+class DecomposableIdentityScalar(object):
     """Implement a decomposable kernel with dim 1 outputs."""
 
     def __init__(self, kernel_input, kernel_output):
@@ -183,7 +182,7 @@ class DecomposableIdentityScalar(ABC):
         Parameters
         ----------
         kernel_input:  torch_itl.Kernel
-            Input kernel k_{X}
+            Input kernel k_{\mathcal{X}}
         kernel_output:  torch_itl.Kernel
             Output kernel k_{\Theta}
         Returns
@@ -296,9 +295,75 @@ class DecomposableIdentityScalar(ABC):
 
 
 class DecomposableIntOp(ABC):
-    r"""Implement a decomposable OVK: K = k_{X} T_{k_{\Theta}}.
+    r"""Implement a decomposable OVK: K = k_{\mathcal{X}} T_{k_{\Theta}}.
 
-    T_{k_\Theta} is the integral operator associated to the kernel T_{k_\Theta}
+    T_{k_\Theta} is the integral operator associated to the kernel
+    T_{k_\Theta}.
+    The class is an abstract class as in practice some level of approximation
+    is needed.
+    """
+
+    @abstractmethod
+    def compute_gram(self, x, thetas=None):
+        """Abstract method for gram matrices."""
+        pass
+
+    @abstractmethod
+    def compute_gram_train(self):
+        """Abstract method for training gram matrices."""
+        pass
+
+    @abstractmethod
+    def forward(self, x, thetas):
+        """Abstract method for forward pass."""
+
+    @abstractmethod
+    def initialize(self, x, warm_start=True, requires_grad=False):
+        """Abstract method for initialization."""
+        pass
+
+    @abstractmethod
+    def vv_norm(self, cpt_gram=True):
+        """Abstract method for vv-norm."""
+        pass
+
+    @abstractmethod
+    def squared_norm_dual_variable(self):
+        """Abstract method for squared norm of dual variables."""
+        pass
+
+    @abstractmethod
+    def scalar_product_dual_variables_data(self):
+        """Abstract method for scalar products of dual variables and data."""
+        pass
+
+    @abstractmethod
+    def regularization(self):
+        """Abstract method for regularization."""
+        pass
+
+    @abstractmethod
+    def gradient_squared_norm_dual_variable(self):
+        """Abstract method for gradient of squared norm of dual variables."""
+        pass
+
+    @abstractmethod
+    def gradient_scalar_product_dual_variables_data(self):
+        """Abstract method for gradient of scalar products of dual and data."""
+        pass
+
+    @abstractmethod
+    def gradient_regularization(self):
+        """Abstract method for gradient of regularization."""
+        pass
+
+
+class DecomposableIntOpEigen(DecomposableIntOp):
+    r"""Implement a decomposable OVK: K = k_{\mathcal{X}} T_{k_{\Theta}}.
+
+    T_{k_\Theta} is the integral operator associated to the kernel
+    T_{k_\Theta}.
+    The class is based on some eigen-based approximation of T_{k_{\Theta}}.
     """
 
     def __init__(self, kernel_input, kernel_output, n_eigen):
@@ -307,7 +372,7 @@ class DecomposableIntOp(ABC):
         Parameters
         ----------
         kernel_input:  torch_itl.Kernel
-            Input kernel k_{X}
+            Input kernel k_{\mathcal{X}}
         kernel_output:  torch_itl.Kernel
             Output kernel k_{\Theta}
         n_eigen:  int
@@ -319,27 +384,17 @@ class DecomposableIntOp(ABC):
         self.kernel_input = kernel_input
         self.kernel_output = kernel_output
         self.n_eigen = n_eigen
-        self.R = None
-        self.eig_vals = None
-        self.eig_vecs = None
-        self.thetas = None
-        self.x_train = None
-        self.n = None
-        self.y_train = None
-        self.thetas = None
-        self.m = None
 
     def compute_gram(self, x):
-        """Compute the gram matrix of the model anchors and x.
+        """Compute the gram matrix of the model.
 
         Parameters
         ----------
         x:  torch.Tensor of shape (n_samples, n_features_1)
-            Input vector of samples used in the empirical risk
+            Input vector of samples
         Returns
         -------
-        G_x: torch.Tensor, \
-                shape (n_samples , n_samples)
+        G_x: torch.Tensor of shape (n_samples , n_samples)
             Gram matrix used for predictions
         """
         G_x = self.kernel_input.compute_gram(x, self.x_train)
@@ -359,102 +414,107 @@ class DecomposableIntOp(ABC):
             raise Exception('No training data provided')
         self.G_x = self.kernel_input.compute_gram(self.x_train)
 
-    def compute_eigen_output(self):
-        r"""Compute and store the approximate eigendecomposition of T_{k_\Theta}.
-
-        Parameters
-        ----------
-        None
-        Returns
-        -------
-        None
-        """
-        eig_vecs, eig_vals, _ = torch.linalg.svd(
-            self.kernel_output.compute_gram(self.thetas))
-        self.eig_vecs = eig_vecs[:, :self.n_eigen].T
-        self.eig_vals = eig_vals[:self.n_eigen]
-
-    def compute_R(self):
-        r"""Compute and store the scalar products of data and eigenbasis.
-
-        Parameters
-        ----------
-        None
-        Returns
-        -------
-        None
-        """
-        self.R = self.y_train @ self.eig_vecs.T
-
-    # def compute_R(self, thetas, y):
-    #     d = thetas.shape[0]
-    #     psi = self.kernel_output.compute_psi(thetas)
-    #     self.R = y @ psi/d
-
+    @abstractmethod
     def forward(self, x, thetas):
-        r"""Compute the prediction of the model on specific data (x, theta).
+        """Abstract method for forward pass."""
 
-        Parameters
-        ----------
-        x:  torch.Tensor of shape (n_samples, n_features_1)
-            Input vector of samples
-        thetas: torch.Tensor of shape (n_anchors, n_features_2)
-            Locations in the $\Theta$ space
-        Returns
-        -------
-        pred: torch.Tensor of shape (n_samples, n_anchors)
-            Prediction of the model
-        """
-        if not hasattr(self, 'x_train'):
-            raise Exception('No training anchors provided to the model')
-
-        G_x = self.compute_gram(x)
-        pred = G_x @ self.alpha @ torch.diag(self.eig_vals) @ self.eig_vecs
-        # Use linear interpolation for new thetas
-        interp_func = interp1d(self.thetas[:, 0].numpy(), pred.numpy(),
-                               fill_value="extrapolate")
-        return torch.from_numpy(interp_func(thetas[:, 0]))
-        # G_t = self.kernel_output.compute_psi(thetas)
-        # n = x.shape[0]
-        # m = thetas.shape[0]
-        # pred = G_x @ self.alpha @ self.Lambda @ G_t.T
-        # return pred
-
+    @abstractmethod
     def initialize(self, x, warm_start=True, requires_grad=False):
-        """Initialize the parameters alpha given by the representer theorem.
+        """Abstract method for initialization."""
+        pass
 
-        Parameters
-        ----------
-        x:  torch.Tensor of shape (n_samples, n_features_1)
-            Input tensor of training data used in the empirical risk
-        warm_start: torch.bool
-            Keeps previous alpha if true
-        requires_grad: torch.bool
-            Use if optimizer is based on autodiff
-        Returns
-        -------
-        None
-        """
-        self.x_train = x
-        if not hasattr(self, 'alpha') or not warm_start:
-            self.alpha = torch.randn(
-                (self.n, self.n_eigen), requires_grad=requires_grad)
-
+    @abstractmethod
     def vv_norm(self, cpt_gram=True):
-        """Compute the vv-RKHS norm of the model.
+        """Abstract method for vv-norm."""
+        pass
 
-        Parameters
-        ----------
-        cpt_gram: torch.bool
-            Use if you want to compute the gram matrix, default is True
-        None
-        Returns
-        -------
-        res: torch.Tensor of shape (1)
-            Vv-rkhs norm of the model
-        """
-        if cpt_gram:
-            self.compute_gram_train()
-        res = torch.trace(self.G_x @ self.alpha
-                          @ torch.diag(self.eig_vals) @ self.alpha.T)
-        return res
+    @abstractmethod
+    def squared_norm_dual_variable(self):
+        """Abstract method for squared norm of dual variables."""
+        pass
+
+    @abstractmethod
+    def scalar_product_dual_variables_data(self):
+        """Abstract method for scalar products of dual variables and data."""
+        pass
+
+    @abstractmethod
+    def regularization(self):
+        """Abstract method for regularization."""
+        pass
+
+    @abstractmethod
+    def gradient_squared_norm_dual_variable(self):
+        """Abstract method for gradient of squared norm of dual variables."""
+        pass
+
+    @abstractmethod
+    def gradient_scalar_product_dual_variables_data(self):
+        """Abstract method for gradient of scalar products of dual and data."""
+        pass
+
+    @abstractmethod
+    def gradient_regularization(self):
+        """Abstract method for gradient of regularization."""
+        pass
+
+
+class DecomposableIntOpSplines(DecomposableIntOp):
+    r"""Implement a decomposable OVK: K = k_{\mathcal{X}} T_{k_{\Theta}}.
+
+    T_{k_\Theta} is the integral operator associated to the kernel
+    T_{k_\Theta}.
+    The class is based on a splines approximation of the dual variables.
+    """
+
+    def compute_gram(self, x, thetas=None):
+        """Abstract method for gram matrices."""
+        pass
+
+    def compute_gram_train(self):
+        """Abstract method for training gram matrices."""
+        pass
+
+    @abstractmethod
+    def forward(self, x, thetas):
+        """Abstract method for forward pass."""
+
+    @abstractmethod
+    def initialize(self, x, warm_start=True, requires_grad=False):
+        """Abstract method for initialization."""
+        pass
+
+    @abstractmethod
+    def vv_norm(self, cpt_gram=True):
+        """Abstract method for vv-norm."""
+        pass
+
+    @abstractmethod
+    def squared_norm_dual_variable(self):
+        """Abstract method for squared norm of dual variables."""
+        pass
+
+    @abstractmethod
+    def scalar_product_dual_variables_data(self):
+        """Abstract method for scalar products of dual variables and data."""
+        pass
+
+    @abstractmethod
+    def regularization(self):
+        """Abstract method for regularization."""
+        pass
+
+    @abstractmethod
+    def gradient_squared_norm_dual_variable(self):
+        """Abstract method for gradient of squared norm of dual variables."""
+        pass
+
+    @abstractmethod
+    def gradient_scalar_product_dual_variables_data(self):
+        """Abstract method for gradient of scalar products of dual and data."""
+        pass
+
+    @abstractmethod
+    def gradient_regularization(self):
+        """Abstract method for gradient of regularization."""
+        pass

@@ -1,3 +1,4 @@
+"""Implement the EmoTransfer class."""
 import torch
 from .vitl import VITL
 from .utils import squared_norm
@@ -5,21 +6,24 @@ from scipy.linalg import solve_sylvester
 
 
 class EmoTransfer(VITL):
-    """Implements emotion transfer with squared loss as proposed in
-    'Emotion Transfer Using Vector-Valued Infinite Task Learning'
+    """Implement emotion transfer.
+
+    The loss is the square loss, as proposed in
+    'Emotion Transfer Using Vector-Valued Infinite Task Learning'.
     """
 
     def __init__(self, model, lbda, sampler, inp_emotion='joint',
                  inc_emotion=True):
+        """Initialize the estimator's parameters."""
         super().__init__(model, squared_norm, lbda, sampler)
         self.inp_emotion = inp_emotion
         self.inc_emotion = inc_emotion
 
     def initialize(self, data):
-        """
-        Transforms data into suitable x_train, y_train for which
-        the Ridge Regression is performed, set emotion anchors,
-        and load it into the model
+        """Transform data into suitable x_train, y_train.
+
+        The problem then corresponds to a kernelized ridge regression.
+        Also set emotion anchors, and load it into the model.
         Parameters
         ----------
         data: torch.Tensor of shape (n_samples, n_emotions, n_landmarks)
@@ -56,8 +60,8 @@ class EmoTransfer(VITL):
         self.model.y_train = y_train
 
     def risk(self, data, thetas=None):
-        """
-        Computes the risk associated to the data
+        """Compute the risk associated to the data.
+
         Parameters
         ----------
         data: torch.Tensor of shape (n_samples, n_emotions, n_landmarks)
@@ -90,8 +94,8 @@ class EmoTransfer(VITL):
         return res
 
     def training_risk(self):
-        """
-        Computes the risk associated to the stored training data
+        """Compute the risk associated to the stored training data.
+
         Parameters
         ----------
         None
@@ -107,8 +111,8 @@ class EmoTransfer(VITL):
         return res
 
     def fit(self, data, verbose=False):
-        """
-        Fits the emotion transfer model by a closed form solution
+        """Fit the emotion transfer model by a closed form solution.
+
         The matrix A of the model has to be invertible
         Parameters
         ----------
@@ -151,9 +155,9 @@ class EmoTransfer(VITL):
                   self.training_risk())
 
     def fit_partial(self, data, mask, verbose=False):
-        """
-        Fits the emotion transfer model by a closed form solution
-        with missing data encoded in mask
+        """Fit the emotion transfer model on partial data.
+
+        Missing data are encoded in a mask, solver is closed-form.
         Parameters
         ----------
         data: torch.Tensor of shape (n_samples, n_emotions, n_landmarks)
@@ -235,9 +239,10 @@ class EmoTransfer(VITL):
         self.model.alpha[output_mask] = alpha_sol
 
     def fit_dim_red(self, data, r, eigen=None, verbose=False):
-        """
-        Fits the emotion transfer model by a closed form solution
-        with low rank matrix A based on SVD of the data covariance.
+        """Fit the emotion transfer model with dimensionality reduction.
+
+        The solver is closed-form, and benefits from a low rank replacement
+        of the matrix A based on SVD of the data covariance.
         If Y^T Y = V S V^T then uses A = V diag( eigen, 0) V^T
         Parameters
         ----------

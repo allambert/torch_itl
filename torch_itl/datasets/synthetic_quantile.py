@@ -1,5 +1,7 @@
 """Synthetic datasets for quantile learning.
-Authors: Maxime Sangnier, Romain Brault"""
+
+Authors: Maxime Sangnier, Romain Brault
+"""
 
 from scipy.stats import norm
 from numpy import sort, sin, array, pi
@@ -9,7 +11,7 @@ from sklearn.base import BaseEstimator
 
 
 class SinePattern(BaseEstimator):
-    """"Sine pattern.
+    """Sine pattern.
 
     The inputs X is drawn uniformly in the 1D interval [min, max].  The target
     y is computed as a sine wave with some period modulated by a sine wave

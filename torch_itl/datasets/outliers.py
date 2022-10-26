@@ -101,17 +101,3 @@ def add_global_outliers_linear(X, Y, n_o, steep_x=None, steep_y=None):
     x_o = (steep_x * t.T).T
     y_o = (steep_y * t.T).T
     return torch.cat((X, x_o), 0), torch.cat((Y, y_o), 0)
-
-
-# # %%
-# n = 100
-# d = 100
-# X = torch.randn(n, d)
-# Y = torch.randn(n, d)
-# freq_sample = 0.2
-# freq_loc = 0.1
-# std = 2
-# X_new = local_outliers(X, freq_sample, freq_loc, std)
-# X_aug, Y_aug = global_outliers_linear(X, Y, 4)
-#
-# X_aug.shape
